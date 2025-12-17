@@ -15,6 +15,10 @@ A cross-platform desktop application for monitoring AI service usage quotas (Cla
 
 ![Interface](docs/assets/GUI.png)
 
+## Support
+
+[![Buy Me A Coffee](https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png)](https://buymeacoffee.com/griffinthomas)
+
 ## Quick Start
 
 ### Prerequisites
