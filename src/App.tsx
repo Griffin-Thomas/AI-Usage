@@ -1,11 +1,50 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Dashboard } from "@/components/Dashboard";
 import { Settings } from "@/components/Settings";
-import { useUsageStore } from "@/lib/store";
+import { useUsageStore, useSettingsStore } from "@/lib/store";
+import { getSettings } from "@/lib/tauri";
+
+function applyTheme(theme: "light" | "dark" | "system") {
+  const root = document.documentElement;
+  if (theme === "system") {
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    root.classList.toggle("dark", prefersDark);
+  } else {
+    root.classList.toggle("dark", theme === "dark");
+  }
+}
 
 function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { setUsage, setError } = useUsageStore();
+  const { setSettings } = useSettingsStore();
+
+  // Initialize theme on app start
+  useEffect(() => {
+    const initSettings = async () => {
+      try {
+        const settings = await getSettings();
+        setSettings(settings);
+        applyTheme(settings.theme);
+      } catch (err) {
+        console.error("Failed to load settings:", err);
+        // Apply system theme as fallback
+        applyTheme("system");
+      }
+    };
+    initSettings();
+
+    // Listen for system theme changes
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleChange = () => {
+      const { settings } = useSettingsStore.getState();
+      if (settings?.theme === "system") {
+        applyTheme("system");
+      }
+    };
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, [setSettings]);
 
   const handleSettingsClose = useCallback(() => {
     setIsSettingsOpen(false);

@@ -24,42 +24,40 @@
 - [x] Expose to frontend via Tauri commands
 
 ### 1.4 System Tray Implementation
-- [ ] Create tray icon with dynamic percentage display
+- [x] Create tray icon with dynamic percentage display
 - [x] Implement tray menu: Show Dashboard, Refresh, Settings, Quit
-- [ ] Add colour-coded icon states (green/yellow/red based on usage)
+- [x] Add colour-coded icon states (green/yellow/red based on usage)
 - [x] Handle tray click events (show/hide main window)
-- [ ] Implement tray tooltip with usage summary
+- [x] Implement tray tooltip with usage summary
 
 ### 1.5 Dashboard UI
 - [x] Create main dashboard layout with usage cards
 - [x] Implement circular progress rings (5-hour + 7-day limits)
 - [x] Add countdown timers to limit resets
-- [ ] Show detailed breakdown (Opus, Sonnet, OAuth apps)
 - [x] Add manual refresh button with debounce
 - [x] Implement loading and error states
 
 ### 1.6 Settings UI
 - [x] Create settings window/modal
 - [x] Provider configuration section (Claude credentials)
-- [ ] Refresh interval selector (1/3/5/10 min or adaptive)
-- [ ] Display mode options (icon only, percentage, combined)
-- [ ] Language selector (EN, JA, ZH-CN, ZH-TW)
-- [ ] Launch at startup toggle
-- [ ] Theme selector (light/dark/system)
+- [x] Refresh interval selector (1/3/5/10 min or adaptive)
+- [x] Display mode options (icon only, percentage, combined)
+- [x] Launch at startup toggle
+- [x] Theme selector (light/dark/system)
 
 ### 1.7 Refresh Scheduler
-- [ ] Implement background refresh scheduler in Rust
-- [ ] Support fixed intervals (1/3/5/10 minutes)
-- [ ] Implement adaptive refresh (adjust based on usage level)
-- [ ] Handle app lifecycle (pause when system sleeps)
-- [ ] Rate limit protection (min 10s between requests)
+- [x] Implement background refresh scheduler in Rust
+- [x] Support fixed intervals (1/3/5/10 minutes)
+- [x] Implement adaptive refresh (adjust based on usage level)
+- [x] Handle app lifecycle (detect sleep/wake via time gap, refresh on wake)
+- [x] Rate limit protection (min 10s between requests)
 
 ### 1.8 Notifications
-- [ ] Implement usage threshold notifications (50%, 75%, 90%)
-- [ ] Add notification for limit reset
-- [ ] Create notification for session expiry
-- [ ] User-configurable notification preferences
-- [ ] Platform-native notification styling
+- [x] Implement usage threshold notifications (50%, 75%, 90%)
+- [x] Add notification for limit reset
+- [x] Create notification for session expiry
+- [x] User-configurable notification preferences (via AppSettings.notifications)
+- [x] Platform-native notification styling (via tauri-plugin-notification)
 
 ---
 

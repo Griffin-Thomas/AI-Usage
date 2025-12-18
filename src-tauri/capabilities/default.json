@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Default permissions for AI Usage Monitor",
+  "description": "Default permissions for AI Pulse",
   "windows": [
     "main"
   ],
@@ -11,6 +11,8 @@
     "core:window:allow-hide",
     "core:window:allow-set-focus",
     "core:window:allow-close",
+    "core:tray:default",
+    "core:image:default",
     "http:default",
     "http:allow-fetch",
     "http:allow-fetch-cancel",
@@ -20,6 +22,9 @@
     "notification:default",
     "notification:allow-is-permission-granted",
     "notification:allow-request-permission",
-    "notification:allow-notify"
+    "notification:allow-notify",
+    "autostart:allow-enable",
+    "autostart:allow-disable",
+    "autostart:allow-is-enabled"
   ]
 }

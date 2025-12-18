@@ -1,23 +1,18 @@
-# AI Usage Monitor
+# AI Pulse
 
-A cross-platform desktop application for monitoring AI service usage quotas (Claude, OpenAI Codex).
+A cross-platform desktop application for monitoring AI service usage quotas (Claude for now).
+
+<p align="center">
+  <img src="docs/assets/screenshot.png" alt="AI Pulse Dashboard" width="400">
+</p>
 
 ## Features
 
-- **Cross-platform** - Windows, macOS, Linux
-- **Multi-provider** - Claude + OpenAI Codex (extensible)
-- **System tray** - Quick access from menu bar
-- **Usage analytics** - Historical tracking and trends
-- **Notifications** - Alerts when approaching limits
-- **Offline support** - Cached state, graceful degradation
-
-## Preview
-
-![Interface](docs/assets/GUI.png)
-
-## Support
-
-[![Buy Me A Coffee](https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png)](https://buymeacoffee.com/griffinthomas)
+- **Real-time Usage Tracking** - Monitor your Claude API usage limits
+- **System Tray Integration** - Dynamic progress ring icon shows usage at a glance
+- **Smart Notifications** - Alerts at 50%, 75%, 90% usage thresholds
+- **Background Refresh** - Automatic updates with adaptive intervals
+- **Cross-platform** - macOS, Linux, Windows
 
 ## Quick Start
 
@@ -25,13 +20,6 @@ A cross-platform desktop application for monitoring AI service usage quotas (Cla
 
 - [Node.js](https://nodejs.org/) 18+
 - [Rust](https://rustup.rs/) toolchain
-
-```bash
-# Install Rust (if not installed)
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-```
-
-### Run the App
 
 ```bash
 # Install dependencies
@@ -48,7 +36,6 @@ npm run tauri dev
    - **Organization ID**: Found in your Claude.ai URL (`claude.ai/settings/organization/[org-id]`)
    - **Session Key**: Found in browser DevTools → Application → Cookies → `sessionKey`
 3. Click **Save Credentials**
-4. Your usage data will be fetched automatically
 
 ## Tech Stack
 
@@ -59,23 +46,15 @@ npm run tauri dev
 
 ## Development
 
-### Commands
-
 ```bash
-# Install dependencies
-npm install
-
 # Run in development (with hot reload)
 npm run tauri dev
 
-# Build frontend only
-npm run build
+# Build for production
+npm run tauri build
 
 # Check Rust compilation
 cargo check --manifest-path src-tauri/Cargo.toml
-
-# Build for production
-npm run tauri build
 ```
 
 ### Project Structure
@@ -89,22 +68,14 @@ src/                    # React frontend
 src-tauri/src/          # Rust backend
 ├── commands/           # Tauri command handlers
 ├── providers/          # API adapters (Claude, Codex)
-└── services/           # Business logic (credentials, settings)
+└── services/           # Business logic (scheduler, notifications)
 ```
 
-### Getting Claude Credentials
+## Support
 
-1. Log in to [claude.ai](https://claude.ai)
-2. Navigate to Settings → Organization
-3. Copy the org ID from the URL
-4. Open DevTools (F12) → Application → Cookies → claude.ai
-5. Copy the `sessionKey` cookie value
-
-## Documentation
-
-- [Architecture](docs/architecture.md)
-- [API Integration](docs/api-integration.md)
-- [Data Models](docs/data-models.md)
+<a href="https://buymeacoffee.com/griffinthomas">
+  <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" width="180">
+</a>
 
 ## License
 

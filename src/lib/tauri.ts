@@ -49,14 +49,40 @@ export async function saveSettings(settings: AppSettings): Promise<void> {
   return invoke("save_settings", { settings });
 }
 
+// Scheduler commands
+export interface SchedulerStatus {
+  running: boolean;
+  intervalSecs: number;
+  lastFetch: number;
+}
+
+export async function getSchedulerStatus(): Promise<SchedulerStatus> {
+  return invoke<SchedulerStatus>("get_scheduler_status");
+}
+
+export async function startScheduler(): Promise<void> {
+  return invoke("start_scheduler");
+}
+
+export async function stopScheduler(): Promise<void> {
+  return invoke("stop_scheduler");
+}
+
+export async function setRefreshInterval(intervalSecs: number): Promise<void> {
+  return invoke("set_refresh_interval", { intervalSecs });
+}
+
+export async function forceRefresh(): Promise<void> {
+  return invoke("force_refresh");
+}
+
 // Settings types
 export interface AppSettings {
   theme: "light" | "dark" | "system";
-  language: "en" | "ja" | "zh-cn" | "zh-tw";
+  language: "en";
   launchAtStartup: boolean;
   refreshMode: "adaptive" | "fixed";
   refreshInterval: 60 | 180 | 300 | 600;
-  displayMode: "icon" | "percentage" | "both";
   notifications: NotificationSettings;
   providers: ProviderConfig[];
 }

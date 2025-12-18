@@ -1,16 +1,40 @@
 import { useState, useEffect } from "react";
-import { X, Save, Trash2, Eye, EyeOff } from "lucide-react";
+import { X, Save, Trash2, Eye, EyeOff, Loader2 } from "lucide-react";
+import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getCredentials, saveCredentials, deleteCredentials, type Credentials } from "@/lib/tauri";
+import {
+  getCredentials,
+  saveCredentials,
+  deleteCredentials,
+  getSettings,
+  saveSettings,
+  setRefreshInterval as setSchedulerInterval,
+  type Credentials,
+  type AppSettings,
+} from "@/lib/tauri";
+import { useSettingsStore } from "@/lib/store";
 
 interface SettingsProps {
   isOpen: boolean;
   onClose: () => void;
   onCredentialsSaved?: () => void;
 }
+
+const REFRESH_OPTIONS = [
+  { value: 60, label: "1 minute" },
+  { value: 180, label: "3 minutes" },
+  { value: 300, label: "5 minutes" },
+  { value: 600, label: "10 minutes" },
+] as const;
+
+const THEME_OPTIONS = [
+  { value: "system", label: "System" },
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+] as const;
 
 export function Settings({ isOpen, onClose, onCredentialsSaved }: SettingsProps) {
   const [orgId, setOrgId] = useState("");
@@ -22,10 +46,18 @@ export function Settings({ isOpen, onClose, onCredentialsSaved }: SettingsProps)
   const [success, setSuccess] = useState<string | null>(null);
   const [hasExisting, setHasExisting] = useState(false);
 
-  // Load existing credentials
+  // Settings state
+  const { settings, setSettings } = useSettingsStore();
+  const [refreshInterval, setRefreshInterval] = useState<60 | 180 | 300 | 600>(300);
+  const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
+  const [launchAtStartup, setLaunchAtStartup] = useState(false);
+  const [isTogglingAutostart, setIsTogglingAutostart] = useState(false);
+
+  // Load existing credentials and settings
   useEffect(() => {
     if (isOpen) {
       loadCredentials();
+      loadSettings();
     }
   }, [isOpen]);
 
@@ -43,6 +75,86 @@ export function Settings({ isOpen, onClose, onCredentialsSaved }: SettingsProps)
       }
     } catch (err) {
       console.error("Failed to load credentials:", err);
+    }
+  };
+
+  const loadSettings = async () => {
+    try {
+      const loadedSettings = await getSettings();
+      setSettings(loadedSettings);
+      setRefreshInterval(loadedSettings.refreshInterval);
+      setTheme(loadedSettings.theme);
+
+      // Check actual autostart status from system
+      const autostartEnabled = await isEnabled();
+      setLaunchAtStartup(autostartEnabled);
+    } catch (err) {
+      console.error("Failed to load settings:", err);
+    }
+  };
+
+  const handleAutoStartToggle = async () => {
+    setIsTogglingAutostart(true);
+    try {
+      if (launchAtStartup) {
+        await disable();
+        setLaunchAtStartup(false);
+      } else {
+        await enable();
+        setLaunchAtStartup(true);
+      }
+
+      // Also update the settings store
+      if (settings) {
+        const newSettings = { ...settings, launchAtStartup: !launchAtStartup };
+        setSettings(newSettings);
+        await saveSettings(newSettings);
+      }
+    } catch (err) {
+      console.error("Failed to toggle autostart:", err);
+    } finally {
+      setIsTogglingAutostart(false);
+    }
+  };
+
+  const handleSettingChange = async <K extends keyof AppSettings>(
+    key: K,
+    value: AppSettings[K]
+  ) => {
+    if (!settings) return;
+
+    const newSettings = { ...settings, [key]: value };
+    setSettings(newSettings);
+
+    // Update local state
+    if (key === "refreshInterval") {
+      setRefreshInterval(value as typeof refreshInterval);
+      // Also update the scheduler's interval
+      try {
+        await setSchedulerInterval(value as number);
+      } catch (err) {
+        console.error("Failed to update scheduler interval:", err);
+      }
+    }
+    if (key === "theme") {
+      setTheme(value as typeof theme);
+      applyTheme(value as typeof theme);
+    }
+
+    try {
+      await saveSettings(newSettings);
+    } catch (err) {
+      console.error("Failed to save settings:", err);
+    }
+  };
+
+  const applyTheme = (newTheme: "light" | "dark" | "system") => {
+    const root = document.documentElement;
+    if (newTheme === "system") {
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      root.classList.toggle("dark", prefersDark);
+    } else {
+      root.classList.toggle("dark", newTheme === "dark");
     }
   };
 
@@ -179,6 +291,87 @@ export function Settings({ isOpen, onClose, onCredentialsSaved }: SettingsProps)
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 )}
+              </div>
+            </div>
+
+            {/* App Settings */}
+            <div className="pt-4 border-t space-y-4">
+              <h3 className="text-sm font-medium">App Settings</h3>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="launch-at-startup">Launch at startup</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Automatically start when you log in
+                  </p>
+                </div>
+                <button
+                  id="launch-at-startup"
+                  role="switch"
+                  aria-checked={launchAtStartup}
+                  disabled={isTogglingAutostart}
+                  onClick={handleAutoStartToggle}
+                  className={`
+                    relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent
+                    transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
+                    disabled:cursor-not-allowed disabled:opacity-50
+                    ${launchAtStartup ? "bg-primary" : "bg-input"}
+                  `}
+                >
+                  <span
+                    className={`
+                      pointer-events-none flex h-5 w-5 items-center justify-center rounded-full bg-background shadow-lg ring-0
+                      transition-transform
+                      ${launchAtStartup ? "translate-x-5" : "translate-x-0"}
+                    `}
+                  >
+                    {isTogglingAutostart && (
+                      <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                    )}
+                  </span>
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="refresh-interval">Refresh Interval</Label>
+                <select
+                  id="refresh-interval"
+                  value={refreshInterval}
+                  onChange={(e) =>
+                    handleSettingChange(
+                      "refreshInterval",
+                      Number(e.target.value) as 60 | 180 | 300 | 600
+                    )
+                  }
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                >
+                  {REFRESH_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="theme">Theme</Label>
+                <select
+                  id="theme"
+                  value={theme}
+                  onChange={(e) =>
+                    handleSettingChange(
+                      "theme",
+                      e.target.value as "light" | "dark" | "system"
+                    )
+                  }
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                >
+                  {THEME_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 

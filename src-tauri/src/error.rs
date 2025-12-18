@@ -14,6 +14,9 @@ pub enum AppError {
 
     #[error("Tauri error: {0}")]
     Tauri(#[from] tauri::Error),
+
+    #[error("Rate limited: {0}")]
+    RateLimit(String),
 }
 
 #[derive(Debug, Error)]

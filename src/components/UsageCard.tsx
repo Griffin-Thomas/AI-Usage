@@ -6,10 +6,31 @@ import { Clock } from "lucide-react";
 
 interface UsageCardProps {
   limit: UsageLimit;
+  compact?: boolean;
 }
 
-export function UsageCard({ limit }: UsageCardProps) {
+export function UsageCard({ limit, compact = false }: UsageCardProps) {
   const resetTime = formatTimeUntil(limit.resetsAt);
+
+  if (compact) {
+    return (
+      <Card className="p-3">
+        <div className="flex items-center gap-3">
+          <ProgressRing value={limit.utilization} size={48} strokeWidth={4} />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{limit.label}</p>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Clock className="h-3 w-3" />
+              <span>{resetTime}</span>
+            </div>
+          </div>
+          <div className="text-lg font-semibold tabular-nums">
+            {Math.round(limit.utilization * 100)}%
+          </div>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card>

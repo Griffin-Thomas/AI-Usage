@@ -26,11 +26,10 @@ interface UsageLimit {
 ```typescript
 interface AppSettings {
   theme: 'light' | 'dark' | 'system';
-  language: 'en' | 'ja' | 'zh-cn' | 'zh-tw';
+  language: 'en';
   launchAtStartup: boolean;
   refreshMode: 'adaptive' | 'fixed';
   refreshInterval: 60 | 180 | 300 | 600;
-  displayMode: 'icon' | 'percentage' | 'both';
   notifications: NotificationSettings;
   providers: ProviderConfig[];
 }

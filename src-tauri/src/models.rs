@@ -88,7 +88,6 @@ pub struct AppSettings {
     pub launch_at_startup: bool,
     pub refresh_mode: String,
     pub refresh_interval: u32,
-    pub display_mode: String,
     pub notifications: NotificationSettings,
     pub providers: Vec<ProviderConfig>,
 }
@@ -118,7 +117,6 @@ impl Default for AppSettings {
             launch_at_startup: false,
             refresh_mode: "adaptive".to_string(),
             refresh_interval: 300,
-            display_mode: "both".to_string(),
             notifications: NotificationSettings {
                 enabled: true,
                 thresholds: vec![50, 75, 90],

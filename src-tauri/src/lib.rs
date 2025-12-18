@@ -1,8 +1,10 @@
+use std::sync::Arc;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Emitter, Manager,
 };
+use tauri_plugin_autostart::MacosLauncher;
 
 mod commands;
 mod error;
@@ -11,9 +13,11 @@ mod providers;
 mod services;
 
 use commands::{
-    delete_credentials, fetch_usage, get_credentials, get_settings, has_credentials,
-    save_credentials, save_settings, validate_credentials,
+    delete_credentials, fetch_usage, force_refresh, get_credentials, get_scheduler_status,
+    get_settings, has_credentials, save_credentials, save_settings, set_refresh_interval,
+    start_scheduler, stop_scheduler, validate_credentials,
 };
+use services::{SchedulerService, SchedulerState};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -21,6 +25,11 @@ pub fn run() {
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_autostart::init(
+            MacosLauncher::LaunchAgent,
+            None,
+        ))
+        .manage(Arc::new(SchedulerState::new()))
         .invoke_handler(tauri::generate_handler![
             // Credential commands
             get_credentials,
@@ -33,6 +42,12 @@ pub fn run() {
             // Usage commands
             fetch_usage,
             validate_credentials,
+            // Scheduler commands
+            get_scheduler_status,
+            start_scheduler,
+            stop_scheduler,
+            set_refresh_interval,
+            force_refresh,
         ])
         .setup(|app| {
             // Set up logging in debug mode
@@ -50,8 +65,9 @@ pub fn run() {
             let refresh = MenuItem::with_id(app, "refresh", "Refresh", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show, &refresh, &quit])?;
 
-            let _tray = TrayIconBuilder::new()
+            let _tray = TrayIconBuilder::with_id("main-tray")
                 .menu(&menu)
+                .tooltip("AI Pulse")
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "quit" => {
@@ -86,6 +102,10 @@ pub fn run() {
                     }
                 })
                 .build(app)?;
+
+            // Start the background scheduler
+            let scheduler_state = app.state::<Arc<SchedulerState>>();
+            SchedulerService::start(app.handle().clone(), scheduler_state.inner().clone());
 
             Ok(())
         })

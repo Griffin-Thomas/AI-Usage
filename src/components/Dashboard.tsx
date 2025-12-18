@@ -23,7 +23,7 @@ export function Dashboard({ provider = "claude", onSettingsClick }: DashboardPro
     <div className="flex flex-col h-full">
       {/* Header */}
       <header className="flex items-center justify-between p-4 border-b">
-        <h1 className="text-lg font-semibold">AI Usage Monitor</h1>
+        <h1 className="text-lg font-semibold">AI Pulse</h1>
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"

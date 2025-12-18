@@ -28,9 +28,13 @@ export function formatTimeUntil(isoDate: string): string {
 
   if (diffMs <= 0) return "Now";
 
-  const hours = Math.floor(diffMs / (1000 * 60 * 60));
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
   const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
 
+  if (days > 0) {
+    return `${days}d ${hours}h ${minutes}m`;
+  }
   if (hours > 0) {
     return `${hours}h ${minutes}m`;
   }
