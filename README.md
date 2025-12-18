@@ -3,7 +3,8 @@
 A cross-platform desktop application for monitoring AI service usage quotas (Claude for now).
 
 <p align="center">
-  <img src="docs/assets/screenshot.png" alt="AI Pulse Dashboard" width="400">
+  <img src="docs/assets/usage.png" alt="AI Pulse Dashboard Usage" width="400">
+  <img src="docs/assets/analytics.png" alt="AI Pulse Dashboard Analytics" width="400">
 </p>
 
 ## Features
