@@ -61,3 +61,50 @@ impl Serialize for ProviderError {
         serializer.serialize_str(&self.to_string())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn provider_error_messages() {
+        assert_eq!(
+            ProviderError::SessionExpired.to_string(),
+            "Session expired - please update your credentials"
+        );
+        assert_eq!(
+            ProviderError::CloudflareBlocked.to_string(),
+            "Access blocked by Cloudflare - try again later"
+        );
+        assert_eq!(
+            ProviderError::RateLimited.to_string(),
+            "Rate limited - please wait before retrying"
+        );
+    }
+
+    #[test]
+    fn provider_error_http() {
+        let err = ProviderError::HttpError("connection refused".to_string());
+        assert_eq!(err.to_string(), "HTTP request failed: connection refused");
+    }
+
+    #[test]
+    fn provider_error_missing_credentials() {
+        let err = ProviderError::MissingCredentials("claude".to_string());
+        assert_eq!(err.to_string(), "Missing credentials for provider: claude");
+    }
+
+    #[test]
+    fn app_error_from_provider_error() {
+        let provider_err = ProviderError::SessionExpired;
+        let app_err: AppError = provider_err.into();
+        assert!(app_err.to_string().contains("Session expired"));
+    }
+
+    #[test]
+    fn provider_error_serialization() {
+        let err = ProviderError::SessionExpired;
+        let json = serde_json::to_string(&err).unwrap();
+        assert!(json.contains("Session expired"));
+    }
+}

@@ -82,9 +82,9 @@
 ## Phase 3: Polish & Distribution
 
 ### 3.1 Testing
-- [ ] Unit tests for Rust backend (adapters, services)
+- [x] Unit tests for Rust backend (adapters, services)
 - [ ] Integration tests for API interactions (mocked)
-- [ ] Frontend component tests with Vitest
+- [x] Frontend component tests with Vitest
 - [ ] Cross-platform testing matrix
 
 ### 3.2 Performance Optimization
@@ -108,9 +108,9 @@
 
 ### 3.5 Build & Distribution
 - [ ] Set up code signing (macOS, Windows)
-- [ ] Create installers: DMG (macOS), MSI/NSIS (Windows), AppImage/deb (Linux)
+- [x] Create installers: DMG (macOS), MSI/NSIS (Windows), AppImage/deb (Linux)
 - [ ] Implement auto-update mechanism
-- [ ] Create GitHub Releases workflow
+- [x] Create GitHub Releases workflow
 
 ### 3.6 Documentation
 - [ ] Write user guide with screenshots

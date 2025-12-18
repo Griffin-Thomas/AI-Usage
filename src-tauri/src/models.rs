@@ -235,3 +235,90 @@ impl Default for AppSettings {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn provider_id_as_str() {
+        assert_eq!(ProviderId::Claude.as_str(), "claude");
+        assert_eq!(ProviderId::Codex.as_str(), "codex");
+    }
+
+    #[test]
+    fn provider_id_display() {
+        assert_eq!(format!("{}", ProviderId::Claude), "claude");
+        assert_eq!(format!("{}", ProviderId::Codex), "codex");
+    }
+
+    #[test]
+    fn credentials_default() {
+        let creds = Credentials::default();
+        assert!(creds.org_id.is_none());
+        assert!(creds.session_key.is_none());
+        assert!(creds.api_key.is_none());
+    }
+
+    #[test]
+    fn credentials_serialization() {
+        let creds = Credentials {
+            org_id: Some("org-123".to_string()),
+            session_key: Some("sk-xxx".to_string()),
+            api_key: None,
+        };
+        let json = serde_json::to_string(&creds).unwrap();
+        assert!(json.contains("org_id"));
+        assert!(json.contains("session_key"));
+        // api_key should be skipped when None
+        assert!(!json.contains("api_key"));
+    }
+
+    #[test]
+    fn credentials_deserialization() {
+        let json = r#"{"org_id":"org-123","session_key":"sk-xxx"}"#;
+        let creds: Credentials = serde_json::from_str(json).unwrap();
+        assert_eq!(creds.org_id, Some("org-123".to_string()));
+        assert_eq!(creds.session_key, Some("sk-xxx".to_string()));
+        assert!(creds.api_key.is_none());
+    }
+
+    #[test]
+    fn retention_policy_default() {
+        let policy = RetentionPolicy::default();
+        assert_eq!(policy.retention_days, 30);
+        assert!(policy.auto_cleanup);
+    }
+
+    #[test]
+    fn app_settings_default() {
+        let settings = AppSettings::default();
+        assert_eq!(settings.theme, "dark");
+        assert_eq!(settings.language, "en");
+        assert!(!settings.launch_at_startup);
+        assert_eq!(settings.refresh_mode, "adaptive");
+        assert_eq!(settings.refresh_interval, 300);
+        assert!(settings.notifications.enabled);
+        assert_eq!(settings.notifications.thresholds, vec![50, 75, 90]);
+        assert_eq!(settings.providers.len(), 2);
+    }
+
+    #[test]
+    fn limit_usage_deserialization() {
+        let json = r#"{"utilization":0.75,"resets_at":"2025-01-15T12:00:00Z"}"#;
+        let usage: LimitUsage = serde_json::from_str(json).unwrap();
+        assert!((usage.utilization - 0.75).abs() < 0.001);
+        assert_eq!(usage.resets_at, "2025-01-15T12:00:00Z");
+    }
+
+    #[test]
+    fn history_query_optional_fields() {
+        let json = r#"{"limit":100}"#;
+        let query: HistoryQuery = serde_json::from_str(json).unwrap();
+        assert!(query.provider.is_none());
+        assert!(query.start_date.is_none());
+        assert!(query.end_date.is_none());
+        assert_eq!(query.limit, Some(100));
+        assert!(query.offset.is_none());
+    }
+}

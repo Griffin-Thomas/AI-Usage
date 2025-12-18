@@ -79,3 +79,64 @@ impl CredentialService {
         has_org_id && has_session_key
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn validate_claude_with_valid_credentials() {
+        let creds = Credentials {
+            org_id: Some("org-123".to_string()),
+            session_key: Some("sk-ant-xxx".to_string()),
+            api_key: None,
+        };
+        assert!(CredentialService::validate_claude(&creds));
+    }
+
+    #[test]
+    fn validate_claude_missing_org_id() {
+        let creds = Credentials {
+            org_id: None,
+            session_key: Some("sk-ant-xxx".to_string()),
+            api_key: None,
+        };
+        assert!(!CredentialService::validate_claude(&creds));
+    }
+
+    #[test]
+    fn validate_claude_missing_session_key() {
+        let creds = Credentials {
+            org_id: Some("org-123".to_string()),
+            session_key: None,
+            api_key: None,
+        };
+        assert!(!CredentialService::validate_claude(&creds));
+    }
+
+    #[test]
+    fn validate_claude_empty_org_id() {
+        let creds = Credentials {
+            org_id: Some("".to_string()),
+            session_key: Some("sk-ant-xxx".to_string()),
+            api_key: None,
+        };
+        assert!(!CredentialService::validate_claude(&creds));
+    }
+
+    #[test]
+    fn validate_claude_whitespace_only() {
+        let creds = Credentials {
+            org_id: Some("   ".to_string()),
+            session_key: Some("sk-ant-xxx".to_string()),
+            api_key: None,
+        };
+        assert!(!CredentialService::validate_claude(&creds));
+    }
+
+    #[test]
+    fn validate_claude_both_missing() {
+        let creds = Credentials::default();
+        assert!(!CredentialService::validate_claude(&creds));
+    }
+}
