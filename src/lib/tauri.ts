@@ -1,5 +1,13 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { UsageData, ProviderId } from "./types";
+import type {
+  UsageData,
+  ProviderId,
+  UsageHistoryEntry,
+  HistoryMetadata,
+  HistoryQuery,
+  RetentionPolicy,
+  UsageStats,
+} from "./types";
 
 // Credentials type matching Rust
 export interface Credentials {
@@ -98,4 +106,62 @@ export interface ProviderConfig {
   id: "claude" | "codex";
   enabled: boolean;
   credentials: Record<string, string>;
+}
+
+// ============================================================================
+// History commands
+// ============================================================================
+
+export async function queryHistory(
+  query?: HistoryQuery
+): Promise<UsageHistoryEntry[]> {
+  return invoke<UsageHistoryEntry[]>("query_history", { query });
+}
+
+export async function getHistoryMetadata(): Promise<HistoryMetadata> {
+  return invoke<HistoryMetadata>("get_history_metadata");
+}
+
+export async function getRetentionPolicy(): Promise<RetentionPolicy> {
+  return invoke<RetentionPolicy>("get_retention_policy");
+}
+
+export async function setRetentionPolicy(
+  policy: RetentionPolicy
+): Promise<void> {
+  return invoke("set_retention_policy", { policy });
+}
+
+export async function cleanupHistory(): Promise<number> {
+  return invoke<number>("cleanup_history");
+}
+
+export async function getUsageStats(
+  provider: ProviderId,
+  limitId: string,
+  start: string,
+  end: string
+): Promise<UsageStats | null> {
+  return invoke<UsageStats | null>("get_usage_stats", {
+    provider,
+    limitId,
+    start,
+    end,
+  });
+}
+
+export async function exportHistoryJson(
+  query?: HistoryQuery
+): Promise<string> {
+  return invoke<string>("export_history_json", { query });
+}
+
+export async function exportHistoryCsv(
+  query?: HistoryQuery
+): Promise<string> {
+  return invoke<string>("export_history_csv", { query });
+}
+
+export async function clearHistory(): Promise<void> {
+  return invoke("clear_history");
 }

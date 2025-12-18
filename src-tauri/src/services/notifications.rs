@@ -92,7 +92,8 @@ impl NotificationService {
         }
 
         for limit in &usage.limits {
-            let current_percent = (limit.utilization * 100.0) as u32;
+            // utilization is already a percentage (0-100) from the API
+            let current_percent = limit.utilization as u32;
 
             // Clear thresholds that are now above current usage (usage dropped)
             state.clear_thresholds_above(&limit.id, current_percent);
@@ -114,7 +115,15 @@ impl NotificationService {
         limit: &UsageLimit,
         settings: &AppSettings,
     ) {
-        let current_percent = (limit.utilization * 100.0) as u32;
+        // utilization is already a percentage (0-100) from the API
+        let current_percent = limit.utilization as u32;
+
+        log::info!(
+            "Checking notifications for {}: utilization={}, current_percent={}%",
+            limit.id,
+            limit.utilization,
+            current_percent
+        );
 
         for &threshold in &settings.notifications.thresholds {
             if current_percent >= threshold && !state.was_threshold_notified(&limit.id, threshold) {
@@ -148,8 +157,9 @@ impl NotificationService {
         // Check if this limit just reset (previous was high, now low)
         if let Some(prev) = previous_usage {
             if let Some(prev_limit) = prev.limits.iter().find(|l| l.id == limit.id) {
-                let prev_percent = (prev_limit.utilization * 100.0) as u32;
-                let curr_percent = (limit.utilization * 100.0) as u32;
+                // utilization is already a percentage (0-100) from the API
+                let prev_percent = prev_limit.utilization as u32;
+                let curr_percent = limit.utilization as u32;
 
                 // If usage dropped significantly (more than 50%) and was previously high
                 if prev_percent >= 50 && curr_percent < prev_percent.saturating_sub(40) {
@@ -188,7 +198,8 @@ impl NotificationService {
         // Check if reset is within 1 hour and usage is high
         let now = Utc::now();
         let time_until_reset = limit.resets_at.signed_duration_since(now);
-        let current_percent = (limit.utilization * 100.0) as u32;
+        // utilization is already a percentage (0-100) from the API
+        let current_percent = limit.utilization as u32;
 
         if time_until_reset > Duration::zero()
             && time_until_reset <= Duration::hours(1)

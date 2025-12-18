@@ -6,8 +6,9 @@ use crate::error::ProviderError;
 use crate::models::{Credentials, UsageData};
 use async_trait::async_trait;
 
-/// Trait for usage data providers
+/// Trait for usage data providers (id/name used in Phase 4 multi-provider support)
 #[async_trait]
+#[allow(dead_code)]
 pub trait UsageProvider: Send + Sync {
     /// Provider identifier
     fn id(&self) -> &'static str;

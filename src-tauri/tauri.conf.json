@@ -14,10 +14,10 @@
       {
         "title": "AI Pulse",
         "label": "main",
-        "width": 480,
-        "height": 640,
-        "minWidth": 400,
-        "minHeight": 500,
+        "width": 500,
+        "height": 800,
+        "minWidth": 420,
+        "minHeight": 600,
         "resizable": true,
         "fullscreen": false,
         "center": true,
@@ -26,10 +26,6 @@
     ],
     "security": {
       "csp": null
-    },
-    "trayIcon": {
-      "iconPath": "icons/icon.png",
-      "iconAsTemplate": true
     }
   },
   "bundle": {

@@ -32,7 +32,7 @@
 
 ### 1.5 Dashboard UI
 - [x] Create main dashboard layout with usage cards
-- [x] Implement circular progress rings (5-hour + 7-day limits)
+- [x] Implement circular progress rings (5-hour + weekly limits)
 - [x] Add countdown timers to limit resets
 - [x] Add manual refresh button with debounce
 - [x] Implement loading and error states
@@ -64,50 +64,86 @@
 ## Phase 2: Usage Analytics & History
 
 ### 2.1 History Storage
-- [ ] Design history data schema (timestamp, provider, usage snapshot)
-- [ ] Implement `HistoryManager` in Rust with Store plugin
-- [ ] Create data retention policies (keep last 30/90 days)
-- [ ] Implement history queries (by date range, provider)
-- [ ] Add data export functionality (JSON/CSV)
+- [x] Design history data schema (timestamp, provider, usage snapshot)
+- [x] Implement `HistoryManager` in Rust with Store plugin
+- [x] Create data retention policies (keep last 30/90 days)
+- [x] Implement history queries (by date range, provider)
+- [x] Add data export functionality (JSON/CSV)
 
 ### 2.2 Analytics Dashboard
-- [ ] Create usage trend charts (daily/weekly/monthly)
-- [ ] Implement usage heatmap (usage patterns by hour/day)
-- [ ] Show peak usage times and patterns
-- [ ] Calculate average usage statistics
-- [ ] Add comparison view (current vs. previous period)
-
-### 2.3 Usage Predictions
-- [ ] Implement usage rate calculation (messages/hour)
-- [ ] Predict time until limit reached
-- [ ] Show optimal usage recommendations
-- [ ] Alert when on track to exceed limits
+- [x] Create usage trend charts (daily/weekly/monthly)
+- [x] Implement usage heatmap (usage patterns by hour/day)
+- [x] Show peak usage times and patterns
+- [x] Calculate average usage statistics
+- [x] Add comparison view (current vs. previous period)
 
 ---
 
-## Phase 3: OpenAI Codex Integration
+## Phase 3: Polish & Distribution
 
-### 3.1 Provider Abstraction
+### 3.1 Testing
+- [ ] Unit tests for Rust backend (adapters, services)
+- [ ] Integration tests for API interactions (mocked)
+- [ ] Frontend component tests with Vitest
+- [ ] Cross-platform testing matrix
+
+### 3.2 Performance Optimization
+- [ ] Profile and optimize memory usage
+- [ ] Minimize CPU usage when idle
+- [ ] Optimize bundle size (tree shaking, code splitting)
+- [ ] Implement efficient data caching
+
+### 3.3 Platform-Specific Polish
+- [ ] macOS: Native menu bar integration, Keychain prompts
+- [ ] macOS: Test notifications in production build (dev builds don't show macOS notifications properly)
+- [ ] Windows: System tray behaviour
+- [ ] Linux: AppIndicator support, various desktop environments
+
+### 3.4 App Icon & Branding
+- [ ] Design custom app icon (usage meter/gauge concept)
+- [ ] Generate icon variants (16x16, 32x32, 128x128, 256x256, 512x512)
+- [ ] Create macOS .icns file
+- [ ] Create Windows .ico file
+- [ ] Design tray icon variants (green/yellow/red states)
+
+### 3.5 Build & Distribution
+- [ ] Set up code signing (macOS, Windows)
+- [ ] Create installers: DMG (macOS), MSI/NSIS (Windows), AppImage/deb (Linux)
+- [ ] Implement auto-update mechanism
+- [ ] Create GitHub Releases workflow
+
+### 3.6 Documentation
+- [ ] Write user guide with screenshots
+- [ ] Document credential extraction process
+- [ ] Create contributing guidelines
+- [ ] Add troubleshooting section
+
+
+---
+
+## Phase 4: OpenAI Codex Integration
+
+### 4.1 Provider Abstraction
 - [ ] Define `UsageProvider` trait in Rust
 - [ ] Refactor `ClaudeAdapter` to implement trait
 - [ ] Create provider registry for dynamic provider loading
 - [ ] Update frontend to handle multiple providers
 
-### 3.2 Codex Adapter Implementation
+### 4.2 Codex Adapter Implementation
 - [ ] Research Codex usage API/dashboard endpoints
 - [ ] Implement `CodexAdapter` struct
 - [ ] Handle Codex-specific auth (session token or API key)
 - [ ] Parse Codex usage data (5-hour window, weekly limits)
 - [ ] Map to common usage data model
 
-### 3.3 Multi-Provider UI
+### 4.3 Multi-Provider UI
 - [ ] Update dashboard to show multiple providers
 - [ ] Create provider switcher/tabs
 - [ ] Implement per-provider settings
 - [ ] Add aggregated usage view (total across providers)
 - [ ] Update tray icon to reflect worst-case provider status
 
-### 3.4 Codex-Specific Features
+### 4.4 Codex-Specific Features
 - [ ] Show task/message-based limits
 - [ ] Display credits balance (if applicable)
 - [ ] Model-specific usage breakdown (GPT-4o, Mini, etc.)
@@ -115,34 +151,40 @@
 
 ---
 
-## Phase 4: Polish & Distribution
+## Phase 5: Google Gemini Integration
 
-### 4.1 Testing
-- [ ] Unit tests for Rust backend (adapters, services)
-- [ ] Integration tests for API interactions (mocked)
-- [ ] Frontend component tests with Vitest
-- [ ] E2E tests with Playwright
-- [ ] Cross-platform testing matrix
+### 5.1 Gemini API Research
+- [ ] Research Gemini API usage/billing endpoints
+- [ ] Document authentication methods (API key, OAuth)
+- [ ] Identify usage data structure (token counts, rate limits)
+- [ ] Determine quota types (RPM, TPM, daily limits)
 
-### 4.2 Performance Optimization
-- [ ] Profile and optimize memory usage
-- [ ] Minimize CPU usage when idle
-- [ ] Optimize bundle size (tree shaking, code splitting)
-- [ ] Implement efficient data caching
+### 5.2 Gemini Adapter Implementation
+- [ ] Create `GeminiAdapter` struct implementing `UsageProvider` trait
+- [ ] Implement authentication (API key storage in credentials)
+- [ ] Fetch usage data from Gemini API
+- [ ] Parse quota and usage response into common model
+- [ ] Handle error cases (401, 403, 429)
 
-### 4.3 Platform-Specific Polish
-- [ ] macOS: Native menu bar integration, Keychain prompts
-- [ ] Windows: System tray behaviour, Windows Hello integration
-- [ ] Linux: AppIndicator support, various desktop environments
+### 5.3 Gemini-Specific Features
+- [ ] Display token usage (input/output tokens)
+- [ ] Show rate limits (requests per minute, tokens per minute)
+- [ ] Model-specific breakdown (Gemini Pro, Flash, Ultra)
+- [ ] Billing/cost tracking if available
+- [ ] Free tier vs paid tier indication
 
-### 4.4 Build & Distribution
-- [ ] Set up code signing (macOS, Windows)
-- [ ] Create installers: DMG (macOS), MSI/NSIS (Windows), AppImage/deb (Linux)
-- [ ] Implement auto-update mechanism
-- [ ] Create GitHub Releases workflow
+### 5.4 Multi-Provider Updates
+- [ ] Add Gemini to provider selector in Settings
+- [ ] Update dashboard to display Gemini usage cards
+- [ ] Include Gemini in tray icon worst-case calculation
+- [ ] Add Gemini-specific notification thresholds
 
-### 4.5 Documentation
-- [ ] Write user guide with screenshots
-- [ ] Document credential extraction process
-- [ ] Create contributing guidelines
-- [ ] Add troubleshooting section
+---
+
+## Future Nice-to-Have
+
+### Usage Predictions
+- [ ] Implement usage rate calculation (messages/hour)
+- [ ] Predict time until limit reached
+- [ ] Show optimal usage recommendations
+- [ ] Alert when on track to exceed limits

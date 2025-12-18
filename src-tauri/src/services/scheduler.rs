@@ -1,7 +1,9 @@
 use crate::error::{AppError, ProviderError};
 use crate::models::UsageData;
 use crate::providers::{ClaudeProvider, UsageProvider};
-use crate::services::{CredentialService, NotificationService, NotificationState, SettingsService};
+use crate::services::{
+    CredentialService, HistoryService, NotificationService, NotificationState, SettingsService,
+};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -296,6 +298,11 @@ impl SchedulerService {
                     );
                 }
 
+                // Save to history
+                if let Err(e) = HistoryService::add_entry(app, &data) {
+                    log::warn!("Failed to save usage to history: {}", e);
+                }
+
                 // Store current usage as previous for next comparison
                 {
                     let mut previous = state.previous_usage.lock().await;
@@ -363,21 +370,21 @@ impl SchedulerService {
             return;
         }
 
-        // Find the highest utilization
+        // Find the highest utilization (already a percentage 0-100 from API)
         let max_utilization = data
             .limits
             .iter()
             .map(|l| l.utilization)
             .fold(0.0_f64, |a, b| a.max(b));
 
-        // Determine new interval based on usage level
-        let new_interval = if max_utilization >= 0.9 {
+        // Determine new interval based on usage level (utilization is 0-100)
+        let new_interval = if max_utilization >= 90.0 {
             // Very high usage: check every minute
             60
-        } else if max_utilization >= 0.75 {
+        } else if max_utilization >= 75.0 {
             // High usage: check every 3 minutes
             180
-        } else if max_utilization >= 0.5 {
+        } else if max_utilization >= 50.0 {
             // Medium usage: check every 5 minutes
             300
         } else {
@@ -391,7 +398,7 @@ impl SchedulerService {
                 "Adaptive refresh: adjusting interval from {}s to {}s (usage: {:.0}%)",
                 current_interval,
                 new_interval,
-                max_utilization * 100.0
+                max_utilization
             );
             state.set_interval(new_interval);
 

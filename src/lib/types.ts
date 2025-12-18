@@ -28,9 +28,51 @@ export interface LimitUsage {
   resets_at: string;
 }
 
+// ============================================================================
+// History Types
+// ============================================================================
+
 export interface UsageHistoryEntry {
   id: string;
   provider: ProviderId;
   timestamp: string;
-  limits: UsageLimit[];
+  limits: UsageLimitSnapshot[];
+}
+
+export interface UsageLimitSnapshot {
+  id: string;
+  utilization: number;
+  resetsAt: string;
+}
+
+export interface HistoryMetadata {
+  entryCount: number;
+  oldestEntry: string | null;
+  newestEntry: string | null;
+  lastCleanup: string | null;
+  retentionDays: number;
+}
+
+export interface HistoryQuery {
+  provider?: ProviderId;
+  startDate?: string;
+  endDate?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface UsageStats {
+  provider: string;
+  limitId: string;
+  periodStart: string;
+  periodEnd: string;
+  avgUtilization: number;
+  maxUtilization: number;
+  minUtilization: number;
+  sampleCount: number;
+}
+
+export interface RetentionPolicy {
+  retentionDays: number;
+  autoCleanup: boolean;
 }

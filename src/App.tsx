@@ -28,8 +28,8 @@ function App() {
         applyTheme(settings.theme);
       } catch (err) {
         console.error("Failed to load settings:", err);
-        // Apply system theme as fallback
-        applyTheme("system");
+        // Apply dark theme as fallback
+        applyTheme("dark");
       }
     };
     initSettings();

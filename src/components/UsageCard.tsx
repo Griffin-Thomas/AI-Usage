@@ -25,7 +25,7 @@ export function UsageCard({ limit, compact = false }: UsageCardProps) {
             </div>
           </div>
           <div className="text-lg font-semibold tabular-nums">
-            {Math.round(limit.utilization * 100)}%
+            {Math.round(limit.utilization)}%
           </div>
         </div>
       </Card>

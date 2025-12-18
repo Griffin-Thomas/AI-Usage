@@ -13,11 +13,13 @@ mod providers;
 mod services;
 
 use commands::{
-    delete_credentials, fetch_usage, force_refresh, get_credentials, get_scheduler_status,
-    get_settings, has_credentials, save_credentials, save_settings, set_refresh_interval,
-    start_scheduler, stop_scheduler, validate_credentials,
+    clear_history, cleanup_history, delete_credentials, export_history_csv, export_history_json,
+    fetch_usage, force_refresh, get_credentials, get_history_metadata, get_retention_policy,
+    get_scheduler_status, get_settings, get_usage_stats, has_credentials, query_history,
+    save_credentials, save_settings, set_refresh_interval, set_retention_policy, start_scheduler,
+    stop_scheduler, validate_credentials,
 };
-use services::{SchedulerService, SchedulerState};
+use services::{HistoryService, SchedulerService, SchedulerState};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -48,6 +50,16 @@ pub fn run() {
             stop_scheduler,
             set_refresh_interval,
             force_refresh,
+            // History commands
+            query_history,
+            get_history_metadata,
+            get_retention_policy,
+            set_retention_policy,
+            cleanup_history,
+            get_usage_stats,
+            export_history_json,
+            export_history_csv,
+            clear_history,
         ])
         .setup(|app| {
             // Set up logging in debug mode
@@ -65,10 +77,18 @@ pub fn run() {
             let refresh = MenuItem::with_id(app, "refresh", "Refresh", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show, &refresh, &quit])?;
 
-            let _tray = TrayIconBuilder::with_id("main-tray")
+            // Use app's default window icon for tray (template mode on macOS)
+            let mut tray_builder = TrayIconBuilder::with_id("main-tray")
                 .menu(&menu)
                 .tooltip("AI Pulse")
-                .show_menu_on_left_click(false)
+                .icon_as_template(true)
+                .show_menu_on_left_click(false);
+
+            if let Some(icon) = app.default_window_icon() {
+                tray_builder = tray_builder.icon(icon.clone());
+            }
+
+            let _tray = tray_builder
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "quit" => {
                         app.exit(0);
@@ -102,6 +122,21 @@ pub fn run() {
                     }
                 })
                 .build(app)?;
+
+            // Run history cleanup on startup (if enabled)
+            if let Ok(policy) = HistoryService::get_retention_policy(app.handle()) {
+                if policy.auto_cleanup {
+                    match HistoryService::cleanup(app.handle()) {
+                        Ok(removed) if removed > 0 => {
+                            log::info!("Startup cleanup: removed {} old history entries", removed);
+                        }
+                        Err(e) => {
+                            log::warn!("Failed to run startup history cleanup: {}", e);
+                        }
+                        _ => {}
+                    }
+                }
+            }
 
             // Start the background scheduler
             let scheduler_state = app.state::<Arc<SchedulerState>>();

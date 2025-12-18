@@ -24,6 +24,7 @@ interface SettingsProps {
 }
 
 const REFRESH_OPTIONS = [
+  { value: 0, label: "Adaptive" },
   { value: 60, label: "1 minute" },
   { value: 180, label: "3 minutes" },
   { value: 300, label: "5 minutes" },
@@ -48,8 +49,8 @@ export function Settings({ isOpen, onClose, onCredentialsSaved }: SettingsProps)
 
   // Settings state
   const { settings, setSettings } = useSettingsStore();
-  const [refreshInterval, setRefreshInterval] = useState<60 | 180 | 300 | 600>(300);
-  const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
+  const [refreshInterval, setRefreshInterval] = useState<0 | 60 | 180 | 300 | 600>(300);
+  const [theme, setTheme] = useState<"light" | "dark" | "system">("dark");
   const [launchAtStartup, setLaunchAtStartup] = useState(false);
   const [isTogglingAutostart, setIsTogglingAutostart] = useState(false);
 
@@ -82,7 +83,12 @@ export function Settings({ isOpen, onClose, onCredentialsSaved }: SettingsProps)
     try {
       const loadedSettings = await getSettings();
       setSettings(loadedSettings);
-      setRefreshInterval(loadedSettings.refreshInterval);
+      // If adaptive mode is enabled, show 0 (Adaptive) in dropdown
+      if (loadedSettings.refreshMode === "adaptive") {
+        setRefreshInterval(0);
+      } else {
+        setRefreshInterval(loadedSettings.refreshInterval);
+      }
       setTheme(loadedSettings.theme);
 
       // Check actual autostart status from system
@@ -127,18 +133,40 @@ export function Settings({ isOpen, onClose, onCredentialsSaved }: SettingsProps)
     setSettings(newSettings);
 
     // Update local state
-    if (key === "refreshInterval") {
-      setRefreshInterval(value as typeof refreshInterval);
-      // Also update the scheduler's interval
-      try {
-        await setSchedulerInterval(value as number);
-      } catch (err) {
-        console.error("Failed to update scheduler interval:", err);
-      }
-    }
     if (key === "theme") {
       setTheme(value as typeof theme);
       applyTheme(value as typeof theme);
+    }
+
+    try {
+      await saveSettings(newSettings);
+    } catch (err) {
+      console.error("Failed to save settings:", err);
+    }
+  };
+
+  const handleRefreshIntervalChange = async (selectedValue: number) => {
+    if (!settings) return;
+
+    const isAdaptive = selectedValue === 0;
+    setRefreshInterval(selectedValue as typeof refreshInterval);
+
+    const newSettings = {
+      ...settings,
+      refreshMode: isAdaptive ? "adaptive" : "fixed",
+      // Keep existing refreshInterval when switching to adaptive, otherwise use selected value
+      refreshInterval: isAdaptive ? settings.refreshInterval : (selectedValue as 60 | 180 | 300 | 600),
+    } as const;
+
+    setSettings(newSettings);
+
+    // Update the scheduler's interval (for fixed mode)
+    if (!isAdaptive) {
+      try {
+        await setSchedulerInterval(selectedValue);
+      } catch (err) {
+        console.error("Failed to update scheduler interval:", err);
+      }
     }
 
     try {
@@ -337,12 +365,7 @@ export function Settings({ isOpen, onClose, onCredentialsSaved }: SettingsProps)
                 <select
                   id="refresh-interval"
                   value={refreshInterval}
-                  onChange={(e) =>
-                    handleSettingChange(
-                      "refreshInterval",
-                      Number(e.target.value) as 60 | 180 | 300 | 600
-                    )
-                  }
+                  onChange={(e) => handleRefreshIntervalChange(Number(e.target.value))}
                   className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                 >
                   {REFRESH_OPTIONS.map((opt) => (
@@ -351,6 +374,11 @@ export function Settings({ isOpen, onClose, onCredentialsSaved }: SettingsProps)
                     </option>
                   ))}
                 </select>
+                {refreshInterval === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Refreshes more frequently as usage increases
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -373,6 +401,7 @@ export function Settings({ isOpen, onClose, onCredentialsSaved }: SettingsProps)
                   ))}
                 </select>
               </div>
+
             </div>
 
             {/* Help section */}

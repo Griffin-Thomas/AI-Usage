@@ -77,19 +77,21 @@ impl ClaudeProvider {
     fn parse_response(&self, response: ClaudeUsageResponse) -> Result<UsageData, ProviderError> {
         let mut limits = Vec::new();
 
-        // 5-hour limit (always present)
-        limits.push(self.parse_limit("five_hour", "5-Hour Limit", &response.five_hour, None)?);
+        // 5-hour limit (may be absent when no usage)
+        if let Some(ref limit) = response.five_hour {
+            limits.push(self.parse_limit("five_hour", "5-Hour Limit", limit, None)?);
+        }
 
-        // 7-day limit (optional)
+        // Weekly limit (optional)
         if let Some(ref limit) = response.seven_day {
-            limits.push(self.parse_limit("seven_day", "7-Day Limit", limit, None)?);
+            limits.push(self.parse_limit("seven_day", "Weekly Limit", limit, None)?);
         }
 
         // Opus limit (optional)
         if let Some(ref limit) = response.seven_day_opus {
             limits.push(self.parse_limit(
                 "seven_day_opus",
-                "7-Day Opus",
+                "Weekly Opus",
                 limit,
                 Some("opus"),
             )?);
@@ -99,7 +101,7 @@ impl ClaudeProvider {
         if let Some(ref limit) = response.seven_day_sonnet {
             limits.push(self.parse_limit(
                 "seven_day_sonnet",
-                "7-Day Sonnet",
+                "Weekly Sonnet",
                 limit,
                 Some("sonnet"),
             )?);
@@ -109,7 +111,7 @@ impl ClaudeProvider {
         if let Some(ref limit) = response.seven_day_oauth_apps {
             limits.push(self.parse_limit(
                 "seven_day_oauth_apps",
-                "7-Day OAuth Apps",
+                "Weekly OAuth Apps",
                 limit,
                 Some("oauth"),
             )?);
@@ -189,10 +191,18 @@ impl UsageProvider for ClaudeProvider {
 
         match status.as_u16() {
             200 => {
-                let body = response
-                    .json::<ClaudeUsageResponse>()
+                let text = response
+                    .text()
                     .await
-                    .map_err(|e| ProviderError::ParseError(e.to_string()))?;
+                    .map_err(|e| ProviderError::HttpError(e.to_string()))?;
+
+                log::info!("Claude API raw response: {}", &text[..text.len().min(1000)]);
+
+                let body: ClaudeUsageResponse = serde_json::from_str(&text)
+                    .map_err(|e| {
+                        log::error!("Failed to parse Claude response: {}. Body: {}", e, text);
+                        ProviderError::ParseError(format!("{} - Response: {}", e, &text[..text.len().min(500)]))
+                    })?;
 
                 self.parse_response(body)
             }
