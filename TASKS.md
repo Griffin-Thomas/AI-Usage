@@ -111,7 +111,7 @@
 - [x] Create installers: DMG (macOS), MSI/NSIS (Windows), AppImage/deb (Linux)
 - [x] Implement auto-update mechanism
 - [x] Create GitHub Releases workflow
-- [ ] Ensure only the necessary assets (installers) are created in a release
+- [x] Ensure only the necessary assets (installers) are created in a release
 
 ### 3.6 Documentation
 - [ ] Write user guide with screenshots

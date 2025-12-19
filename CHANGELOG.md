@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2025-12-19
+
+### Changed
+- Optimized release build to only create necessary bundle types (DMG, NSIS, AppImage) instead of all formats
+- Release notes now automatically include changelog entries for that version
+
 ## [0.4.0] - 2025-12-19
 
 ### Added
