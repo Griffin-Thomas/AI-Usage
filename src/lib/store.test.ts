@@ -76,6 +76,7 @@ describe('useSettingsStore', () => {
         launchAtStartup: false,
         refreshMode: 'adaptive',
         refreshInterval: 300,
+        trayDisplayLimit: 'highest',
         notifications: {
           enabled: true,
           thresholds: [50, 75, 90],

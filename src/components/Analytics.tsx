@@ -8,8 +8,6 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  BarChart,
-  Bar,
 } from "recharts";
 import { Download, Trash2, RefreshCw, TrendingUp, TrendingDown, Minus, Clock, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";

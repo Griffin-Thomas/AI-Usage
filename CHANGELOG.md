@@ -5,6 +5,8 @@ All notable changes to AI Pulse will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
 ## [0.4.0] - 2025-12-19
 
 ### Added
@@ -21,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Analytics tab with usage history visualization
-- Usage history storage with configurable retention (30/60/90 days)
+- Usage history storage
 - Export history to JSON/CSV
 - Hourly and daily usage charts
 - Auto-updating application with update notifications
