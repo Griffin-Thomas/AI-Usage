@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2025-12-19
+
+### Changed
+- Removed DMG format for macOS (use .app.tar.gz instead)
+- Dropped Intel macOS (x64) builds - Apple Silicon only
+
 ## [0.5.0] - 2025-12-19
 
 ### Changed
