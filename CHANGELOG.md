@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.2] - 2025-12-19
+
+### Changed
+- Switched macOS distribution back to DMG format for standard drag-to-Applications install
+- Added installation instructions to README with `xattr -cr` workaround for unsigned apps, since I don't want to spend $99 USD/year for an Apple Developer account
+
 ## [0.5.1] - 2025-12-19
 
 ### Changed

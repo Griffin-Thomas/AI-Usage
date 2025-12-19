@@ -20,7 +20,27 @@ A cross-platform desktop application for monitoring AI service usage quotas (Cla
 - **Background Refresh** - Automatic updates with adaptive intervals
 - **Cross-platform** - macOS, Linux, Windows
 
-## Quick Start
+## Installation
+
+### macOS
+
+1. Download the `.dmg` file from [Releases](https://github.com/Griffin-Thomas/AI-Pulse/releases)
+2. Open the `.dmg` and drag AI Pulse to your Applications folder
+3. Before opening, run this command to remove the quarantine attribute (required for unsigned apps):
+   ```bash
+   xattr -cr "/Applications/AI Pulse.app"
+   ```
+4. Open AI Pulse from Applications
+
+### Windows
+
+Download and run the `.exe` installer from [Releases](https://github.com/Griffin-Thomas/AI-Pulse/releases).
+
+### Linux
+
+Download the `.AppImage` from [Releases](https://github.com/Griffin-Thomas/AI-Pulse/releases), make it executable, and run it.
+
+## Development
 
 ### Prerequisites
 

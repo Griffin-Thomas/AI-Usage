@@ -33,7 +33,7 @@ jobs:
         with:
           script: |
             const changelog = `${{ steps.changelog.outputs.content }}`;
-            const body = `Download the appropriate installer for your platform below.\n\n## What's New\n${changelog}`;
+            const body = `Download the appropriate installer for your OS below.\n\n## What's New\n${changelog}`;
             const { data } = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
