@@ -27,4 +27,8 @@ dist-ssr
 CLAUDE.md
 AGENTS.md
 HANDOFF.md
+RELEASE.md
 .venv/
+
+# Tauri signing keys (private key - never commit!)
+.tauri-keys/

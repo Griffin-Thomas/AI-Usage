@@ -45,19 +45,6 @@ npm run tauri dev
 - **shadcn/ui + Tailwind CSS v4** - Components and styling
 - **Zustand** - State management
 
-## Development
-
-```bash
-# Run in development (with hot reload)
-npm run tauri dev
-
-# Build for production
-npm run tauri build
-
-# Check Rust compilation
-cargo check --manifest-path src-tauri/Cargo.toml
-```
-
 ### Project Structure
 
 ```

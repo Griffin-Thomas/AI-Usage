@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { Dashboard } from "@/components/Dashboard";
 import { Settings } from "@/components/Settings";
+import { UpdateChecker } from "@/components/UpdateChecker";
 import { useUsageStore, useSettingsStore } from "@/lib/store";
 import { getSettings } from "@/lib/tauri";
 
@@ -58,6 +59,7 @@ function App() {
 
   return (
     <div className="h-screen w-full bg-background text-foreground">
+      <UpdateChecker />
       <Dashboard
         provider="claude"
         onSettingsClick={() => setIsSettingsOpen(true)}

@@ -31,6 +31,8 @@ pub fn run() {
             MacosLauncher::LaunchAgent,
             None,
         ))
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(Arc::new(SchedulerState::new()))
         .invoke_handler(tauri::generate_handler![
             // Credential commands

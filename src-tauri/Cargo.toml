@@ -1,6 +1,6 @@
 [package]
 name = "ai-pulse"
-version = "0.1.0"
+version = "0.3.0"
 description = "Monitor AI service usage quotas for Claude and OpenAI Codex"
 authors = ["you"]
 license = "MIT"
@@ -31,3 +31,5 @@ tauri-plugin-http = "2"
 tauri-plugin-store = "2"
 tauri-plugin-notification = "2"
 tauri-plugin-autostart = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"

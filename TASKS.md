@@ -109,7 +109,7 @@
 ### 3.5 Build & Distribution
 - [ ] Set up code signing (macOS, Windows)
 - [x] Create installers: DMG (macOS), MSI/NSIS (Windows), AppImage/deb (Linux)
-- [ ] Implement auto-update mechanism
+- [x] Implement auto-update mechanism
 - [x] Create GitHub Releases workflow
 
 ### 3.6 Documentation
