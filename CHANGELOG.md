@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2025-12-19
+
+### Added
+- Custom app icon with usage gauge/meter design
+- Icon generation script (`npm run generate:icons`)
+- Comprehensive user guide with screenshots (`docs/user-guide.md`)
+- Contributing guidelines (`CONTRIBUTING.md`)
+- Troubleshooting section in user guide
+
+### Changed
+- Menu bar tray icon now shows a heartbeat pulse in the centre instead of a dot
+- Tray menu now includes Settings option (Show Dashboard, Refresh, Settings, Quit)
+- Added explicit tray permissions for tooltip and icon updates
+
 ## [0.5.3] - 2025-12-19
 
 ### Fixed

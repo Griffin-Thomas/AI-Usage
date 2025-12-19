@@ -77,7 +77,8 @@ pub fn run() {
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let show = MenuItem::with_id(app, "show", "Show Dashboard", true, None::<&str>)?;
             let refresh = MenuItem::with_id(app, "refresh", "Refresh", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&show, &refresh, &quit])?;
+            let settings = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&show, &refresh, &settings, &quit])?;
 
             // Use app's default window icon for tray (template mode on macOS)
             let mut tray_builder = TrayIconBuilder::with_id("main-tray")
@@ -105,6 +106,14 @@ pub fn run() {
                         // Emit refresh event to frontend
                         if let Some(window) = app.get_webview_window("main") {
                             let _ = window.emit("tray-refresh", ());
+                        }
+                    }
+                    "settings" => {
+                        // Show window and emit settings event to frontend
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                            let _ = window.emit("tray-settings", ());
                         }
                     }
                     _ => {}

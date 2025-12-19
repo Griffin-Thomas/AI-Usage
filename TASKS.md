@@ -100,24 +100,24 @@
 - [ ] Linux: AppIndicator support, various desktop environments
 
 ### 3.4 App Icon & Branding
-- [ ] Design custom app icon (usage meter/gauge concept)
-- [ ] Generate icon variants (16x16, 32x32, 128x128, 256x256, 512x512)
-- [ ] Create macOS .icns file
-- [ ] Create Windows .ico file
-- [ ] Design tray icon variants (green/yellow/red states)
+- [x] Design custom app icon (usage meter/gauge concept)
+- [x] Generate icon variants (16x16, 32x32, 128x128, 256x256, 512x512)
+- [x] Create macOS .icns file
+- [x] Create Windows .ico file
+- [x] Design tray icon variants (green/yellow/red states)
 
 ### 3.5 Build & Distribution
-- [ ] Set up code signing (macOS, Windows)
+- [ ] Set up code signing (macOS, Windows). This is BLOCKED since it costs $99 USD/year for an Apple Developer account
 - [x] Create installers: DMG (macOS), MSI/NSIS (Windows), AppImage/deb (Linux)
 - [x] Implement auto-update mechanism
 - [x] Create GitHub Releases workflow
 - [x] Ensure only the necessary assets (installers) are created in a release
 
 ### 3.6 Documentation
-- [ ] Write user guide with screenshots
-- [ ] Document credential extraction process
-- [ ] Create contributing guidelines
-- [ ] Add troubleshooting section
+- [x] Write user guide with screenshots
+- [x] Document credential extraction process
+- [x] Create contributing guidelines
+- [x] Add troubleshooting section
 
 
 ---

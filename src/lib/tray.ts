@@ -86,11 +86,27 @@ function generateIconData(
   ctx.arc(centerX, centerY, radius, startAngle, endAngle);
   ctx.stroke();
 
-  // Draw center dot with usage color for visibility
-  ctx.fillStyle = color;
+  // Draw heartbeat pulse in center (ECG-like wave)
+  const pulseWidth = 10;
+  const pulseHeight = 4;
+  const pulseStartX = centerX - pulseWidth / 2;
+  const pulseY = centerY;
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
   ctx.beginPath();
-  ctx.arc(centerX, centerY, 3, 0, Math.PI * 2);
-  ctx.fill();
+
+  // Simplified heartbeat: flat - spike up - spike down - flat
+  ctx.moveTo(pulseStartX, pulseY);
+  ctx.lineTo(pulseStartX + pulseWidth * 0.25, pulseY);
+  ctx.lineTo(pulseStartX + pulseWidth * 0.4, pulseY - pulseHeight);
+  ctx.lineTo(pulseStartX + pulseWidth * 0.55, pulseY + pulseHeight * 0.6);
+  ctx.lineTo(pulseStartX + pulseWidth * 0.7, pulseY - pulseHeight * 0.3);
+  ctx.lineTo(pulseStartX + pulseWidth * 0.8, pulseY);
+  ctx.lineTo(pulseStartX + pulseWidth, pulseY);
+  ctx.stroke();
 
   // Get image data as RGBA
   const imageData = ctx.getImageData(0, 0, ICON_SIZE, ICON_SIZE);

@@ -724,7 +724,7 @@ function formatHour(hour: number): string {
   return `${displayHour}${suffix}`;
 }
 
-// Get color for heatmap cell based on usage percentage
+// Get colour for heatmap cell based on usage percentage
 function getHeatmapColor(value: number): string {
   if (value === 0) return "bg-muted";
   if (value < 25) return "bg-green-200 dark:bg-green-900";

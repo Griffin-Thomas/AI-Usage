@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "AI Pulse",
-  "version": "0.5.3",
+  "version": "0.9.0",
   "identifier": "com.aipulse.app",
   "build": {
     "frontendDist": "../dist",
@@ -35,6 +35,8 @@
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
+      "icons/256x256.png",
+      "icons/512x512.png",
       "icons/icon.icns",
       "icons/icon.ico"
     ],

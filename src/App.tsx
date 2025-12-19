@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { listen } from "@tauri-apps/api/event";
 import { Dashboard } from "@/components/Dashboard";
 import { Settings } from "@/components/Settings";
 import { UpdateChecker } from "@/components/UpdateChecker";
@@ -49,6 +50,16 @@ function App() {
 
   const handleSettingsClose = useCallback(() => {
     setIsSettingsOpen(false);
+  }, []);
+
+  // Listen for tray settings event
+  useEffect(() => {
+    const unlisten = listen("tray-settings", () => {
+      setIsSettingsOpen(true);
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+    };
   }, []);
 
   const handleCredentialsSaved = useCallback(() => {

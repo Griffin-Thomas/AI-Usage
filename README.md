@@ -63,6 +63,8 @@ npm run tauri dev
    - **Session Key**: Found in browser DevTools → Application → Cookies → `sessionKey`
 3. Click **Save Credentials**
 
+For detailed instructions, see the [User Guide](docs/user-guide.md).
+
 ## Tech Stack
 
 - **Tauri v2** - Cross-platform framework (Rust backend)

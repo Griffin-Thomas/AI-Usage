@@ -1,8 +1,8 @@
 [package]
 name = "ai-pulse"
-version = "0.5.3"
-description = "Monitor AI service usage quotas for Claude and OpenAI Codex"
-authors = ["you"]
+version = "0.9.0"
+description = "Monitor AI service usage quotas for Claude"
+authors = ["Griffin Thomas"]
 license = "MIT"
 repository = ""
 edition = "2021"
