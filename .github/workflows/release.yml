@@ -82,6 +82,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Debug - Check if signing key is set
+        run: |
+          if [ -n "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            echo "TAURI_SIGNING_PRIVATE_KEY is set (length: ${#TAURI_SIGNING_PRIVATE_KEY})"
+          else
+            echo "TAURI_SIGNING_PRIVATE_KEY is NOT set or empty"
+          fi
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+
       - name: Build and upload Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
