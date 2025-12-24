@@ -83,37 +83,31 @@
 
 ### 3.1 Testing
 - [x] Unit tests for Rust backend (adapters, services)
-- [ ] Integration tests for API interactions (mocked)
+- [x] Integration tests for API interactions (mocked)
 - [x] Frontend component tests with Vitest
 - [ ] Cross-platform testing matrix
 
-### 3.2 Performance Optimization
-- [ ] Profile and optimize memory usage
-- [ ] Minimize CPU usage when idle
-- [ ] Optimize bundle size (tree shaking, code splitting)
-- [ ] Implement efficient data caching
-
-### 3.3 Platform-Specific Polish
+### 3.2 Platform-Specific Polish
 - [ ] macOS: Native menu bar integration, Keychain prompts
-- [ ] macOS: Test notifications in production build (dev builds don't show macOS notifications properly)
+- [x] macOS: Test notifications in production build
 - [ ] Windows: System tray behaviour
 - [ ] Linux: AppIndicator support, various desktop environments
 
-### 3.4 App Icon & Branding
+### 3.3 App Icon & Branding
 - [x] Design custom app icon (usage meter/gauge concept)
 - [x] Generate icon variants (16x16, 32x32, 128x128, 256x256, 512x512)
 - [x] Create macOS .icns file
 - [x] Create Windows .ico file
 - [x] Design tray icon variants (green/yellow/red states)
 
-### 3.5 Build & Distribution
+### 3.4 Build & Distribution
 - [ ] Set up code signing (macOS, Windows). This is BLOCKED since it costs $99 USD/year for an Apple Developer account
 - [x] Create installers: DMG (macOS), MSI/NSIS (Windows), AppImage/deb (Linux)
 - [x] Implement auto-update mechanism
 - [x] Create GitHub Releases workflow
 - [x] Ensure only the necessary assets (installers) are created in a release
 
-### 3.6 Documentation
+### 3.5 Documentation
 - [x] Write user guide with screenshots
 - [x] Document credential extraction process
 - [x] Create contributing guidelines
@@ -189,3 +183,9 @@
 - [ ] Predict time until limit reached
 - [ ] Show optimal usage recommendations
 - [ ] Alert when on track to exceed limits
+
+### Performance Optimization
+- [ ] Profile and optimize memory usage
+- [ ] Minimize CPU usage when idle
+- [ ] Optimize bundle size (tree shaking, code splitting)
+- [ ] Implement efficient data caching

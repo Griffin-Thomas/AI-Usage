@@ -6,7 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-- Pink theme support as requested by my fiancée
+
+## [0.10.0] - 2025-12-23
+
+### Added
+- Pink theme support
+- Welcome notification on first launch (triggers macOS notification permission prompt when app is signed)
+- Mocked integration tests for Claude API (Rust backend with wiremock)
+- Frontend integration tests for Tauri API bindings (32 new tests)
+
+### Fixed
+- Fixed macOS notifications not displaying in production builds
 
 ## [0.9.0] - 2025-12-19
 

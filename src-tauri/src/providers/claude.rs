@@ -10,15 +10,24 @@ const CLAUDE_API_BASE: &str = "https://claude.ai/api";
 
 pub struct ClaudeProvider {
     client: reqwest::Client,
+    base_url: String,
 }
 
 impl ClaudeProvider {
     pub fn new() -> Result<Self, ProviderError> {
+        Self::with_base_url(CLAUDE_API_BASE)
+    }
+
+    /// Create a provider with a custom base URL (for testing)
+    pub fn with_base_url(base_url: &str) -> Result<Self, ProviderError> {
         let client = reqwest::Client::builder()
             .build()
             .map_err(|e| ProviderError::HttpError(e.to_string()))?;
 
-        Ok(Self { client })
+        Ok(Self {
+            client,
+            base_url: base_url.to_string(),
+        })
     }
 
     /// Build browser-like headers for Cloudflare bypass
@@ -190,7 +199,7 @@ impl UsageProvider for ClaudeProvider {
             .as_ref()
             .ok_or_else(|| ProviderError::MissingCredentials("session_key".to_string()))?;
 
-        let url = format!("{}/organizations/{}/usage", CLAUDE_API_BASE, org_id);
+        let url = format!("{}/organizations/{}/usage", self.base_url, org_id);
         let headers = self.build_headers(session_key);
 
         log::info!("Fetching Claude usage from: {}", url);
@@ -243,5 +252,404 @@ impl UsageProvider for ClaudeProvider {
                 .as_ref()
                 .map(|s| !s.is_empty())
                 .unwrap_or(false)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use wiremock::matchers::{header, method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    fn make_credentials() -> Credentials {
+        Credentials {
+            org_id: Some("test-org-123".to_string()),
+            session_key: Some("sk-test-session-key".to_string()),
+            api_key: None,
+        }
+    }
+
+    fn make_usage_response() -> serde_json::Value {
+        serde_json::json!({
+            "five_hour": {
+                "utilization": 0.45,
+                "resets_at": "2025-01-15T17:00:00Z"
+            },
+            "seven_day": {
+                "utilization": 0.25,
+                "resets_at": "2025-01-20T00:00:00Z"
+            },
+            "seven_day_opus": null,
+            "seven_day_sonnet": null,
+            "seven_day_oauth_apps": null,
+            "iguana_necktie": null,
+            "extra_usage": null
+        })
+    }
+
+    // ============================================================================
+    // Integration tests with mocked HTTP
+    // ============================================================================
+
+    #[tokio::test]
+    async fn test_fetch_usage_success() {
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("GET"))
+            .and(path("/organizations/test-org-123/usage"))
+            .and(header("cookie", "sessionKey=sk-test-session-key"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(make_usage_response()))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        let provider = ClaudeProvider::with_base_url(&mock_server.uri()).unwrap();
+        let credentials = make_credentials();
+
+        let result = provider.fetch_usage(&credentials).await;
+
+        assert!(result.is_ok());
+        let usage = result.unwrap();
+        assert_eq!(usage.provider, "claude");
+        assert_eq!(usage.limits.len(), 2);
+
+        let five_hour = usage.limits.iter().find(|l| l.id == "five_hour").unwrap();
+        assert!((five_hour.utilization - 0.45).abs() < 0.001);
+
+        let seven_day = usage.limits.iter().find(|l| l.id == "seven_day").unwrap();
+        assert!((seven_day.utilization - 0.25).abs() < 0.001);
+    }
+
+    #[tokio::test]
+    async fn test_fetch_usage_401_session_expired() {
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("GET"))
+            .and(path("/organizations/test-org-123/usage"))
+            .respond_with(ResponseTemplate::new(401))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        let provider = ClaudeProvider::with_base_url(&mock_server.uri()).unwrap();
+        let credentials = make_credentials();
+
+        let result = provider.fetch_usage(&credentials).await;
+
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ProviderError::SessionExpired => {}
+            err => panic!("Expected SessionExpired, got {:?}", err),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_fetch_usage_403_cloudflare_blocked() {
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("GET"))
+            .and(path("/organizations/test-org-123/usage"))
+            .respond_with(ResponseTemplate::new(403))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        let provider = ClaudeProvider::with_base_url(&mock_server.uri()).unwrap();
+        let credentials = make_credentials();
+
+        let result = provider.fetch_usage(&credentials).await;
+
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ProviderError::CloudflareBlocked => {}
+            err => panic!("Expected CloudflareBlocked, got {:?}", err),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_fetch_usage_429_rate_limited() {
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("GET"))
+            .and(path("/organizations/test-org-123/usage"))
+            .respond_with(ResponseTemplate::new(429))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        let provider = ClaudeProvider::with_base_url(&mock_server.uri()).unwrap();
+        let credentials = make_credentials();
+
+        let result = provider.fetch_usage(&credentials).await;
+
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ProviderError::RateLimited => {}
+            err => panic!("Expected RateLimited, got {:?}", err),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_fetch_usage_500_server_error() {
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("GET"))
+            .and(path("/organizations/test-org-123/usage"))
+            .respond_with(ResponseTemplate::new(500).set_body_string("Internal Server Error"))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        let provider = ClaudeProvider::with_base_url(&mock_server.uri()).unwrap();
+        let credentials = make_credentials();
+
+        let result = provider.fetch_usage(&credentials).await;
+
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ProviderError::HttpError(msg) => {
+                assert!(msg.contains("500"));
+            }
+            err => panic!("Expected HttpError, got {:?}", err),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_fetch_usage_invalid_json() {
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("GET"))
+            .and(path("/organizations/test-org-123/usage"))
+            .respond_with(ResponseTemplate::new(200).set_body_string("not valid json"))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        let provider = ClaudeProvider::with_base_url(&mock_server.uri()).unwrap();
+        let credentials = make_credentials();
+
+        let result = provider.fetch_usage(&credentials).await;
+
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ProviderError::ParseError(msg) => {
+                assert!(msg.contains("not valid json"));
+            }
+            err => panic!("Expected ParseError, got {:?}", err),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_fetch_usage_missing_org_id() {
+        let provider = ClaudeProvider::new().unwrap();
+        let credentials = Credentials {
+            org_id: None,
+            session_key: Some("sk-test".to_string()),
+            api_key: None,
+        };
+
+        let result = provider.fetch_usage(&credentials).await;
+
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ProviderError::MissingCredentials(field) => {
+                assert_eq!(field, "org_id");
+            }
+            err => panic!("Expected MissingCredentials, got {:?}", err),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_fetch_usage_missing_session_key() {
+        let provider = ClaudeProvider::new().unwrap();
+        let credentials = Credentials {
+            org_id: Some("org-123".to_string()),
+            session_key: None,
+            api_key: None,
+        };
+
+        let result = provider.fetch_usage(&credentials).await;
+
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ProviderError::MissingCredentials(field) => {
+                assert_eq!(field, "session_key");
+            }
+            err => panic!("Expected MissingCredentials, got {:?}", err),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_fetch_usage_zero_utilization() {
+        // When utilization is 0%, resets_at is null and the limit should be skipped
+        let mock_server = MockServer::start().await;
+
+        let response = serde_json::json!({
+            "five_hour": {
+                "utilization": 0.0,
+                "resets_at": null
+            },
+            "seven_day": {
+                "utilization": 0.25,
+                "resets_at": "2025-01-20T00:00:00Z"
+            },
+            "seven_day_opus": null,
+            "seven_day_sonnet": null,
+            "seven_day_oauth_apps": null,
+            "iguana_necktie": null,
+            "extra_usage": null
+        });
+
+        Mock::given(method("GET"))
+            .and(path("/organizations/test-org-123/usage"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(response))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        let provider = ClaudeProvider::with_base_url(&mock_server.uri()).unwrap();
+        let credentials = make_credentials();
+
+        let result = provider.fetch_usage(&credentials).await;
+
+        assert!(result.is_ok());
+        let usage = result.unwrap();
+        // five_hour should be skipped since resets_at is null
+        assert_eq!(usage.limits.len(), 1);
+        assert_eq!(usage.limits[0].id, "seven_day");
+    }
+
+    #[tokio::test]
+    async fn test_fetch_usage_all_limit_types() {
+        let mock_server = MockServer::start().await;
+
+        let response = serde_json::json!({
+            "five_hour": {
+                "utilization": 0.5,
+                "resets_at": "2025-01-15T17:00:00Z"
+            },
+            "seven_day": {
+                "utilization": 0.3,
+                "resets_at": "2025-01-20T00:00:00Z"
+            },
+            "seven_day_opus": {
+                "utilization": 0.8,
+                "resets_at": "2025-01-20T00:00:00Z"
+            },
+            "seven_day_sonnet": {
+                "utilization": 0.2,
+                "resets_at": "2025-01-20T00:00:00Z"
+            },
+            "seven_day_oauth_apps": {
+                "utilization": 0.1,
+                "resets_at": "2025-01-20T00:00:00Z"
+            },
+            "iguana_necktie": null,
+            "extra_usage": null
+        });
+
+        Mock::given(method("GET"))
+            .and(path("/organizations/test-org-123/usage"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(response))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        let provider = ClaudeProvider::with_base_url(&mock_server.uri()).unwrap();
+        let credentials = make_credentials();
+
+        let result = provider.fetch_usage(&credentials).await;
+
+        assert!(result.is_ok());
+        let usage = result.unwrap();
+        assert_eq!(usage.limits.len(), 5);
+
+        // Check categories are set correctly
+        let opus = usage.limits.iter().find(|l| l.id == "seven_day_opus").unwrap();
+        assert_eq!(opus.category, Some("opus".to_string()));
+
+        let sonnet = usage.limits.iter().find(|l| l.id == "seven_day_sonnet").unwrap();
+        assert_eq!(sonnet.category, Some("sonnet".to_string()));
+
+        let oauth = usage.limits.iter().find(|l| l.id == "seven_day_oauth_apps").unwrap();
+        assert_eq!(oauth.category, Some("oauth".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_headers_are_browser_like() {
+        let mock_server = MockServer::start().await;
+
+        // Verify key browser-like headers are sent (using header_exists for flexibility)
+        Mock::given(method("GET"))
+            .and(path("/organizations/test-org-123/usage"))
+            .and(header("origin", "https://claude.ai"))
+            .and(header("referer", "https://claude.ai/"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(make_usage_response()))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        let provider = ClaudeProvider::with_base_url(&mock_server.uri()).unwrap();
+        let credentials = make_credentials();
+
+        let result = provider.fetch_usage(&credentials).await;
+        assert!(result.is_ok());
+    }
+
+    // ============================================================================
+    // Unit tests for validate_credentials
+    // ============================================================================
+
+    #[test]
+    fn test_validate_credentials_valid() {
+        let provider = ClaudeProvider::new().unwrap();
+        let credentials = make_credentials();
+        assert!(provider.validate_credentials(&credentials));
+    }
+
+    #[test]
+    fn test_validate_credentials_missing_org_id() {
+        let provider = ClaudeProvider::new().unwrap();
+        let credentials = Credentials {
+            org_id: None,
+            session_key: Some("sk-test".to_string()),
+            api_key: None,
+        };
+        assert!(!provider.validate_credentials(&credentials));
+    }
+
+    #[test]
+    fn test_validate_credentials_missing_session_key() {
+        let provider = ClaudeProvider::new().unwrap();
+        let credentials = Credentials {
+            org_id: Some("org-123".to_string()),
+            session_key: None,
+            api_key: None,
+        };
+        assert!(!provider.validate_credentials(&credentials));
+    }
+
+    #[test]
+    fn test_validate_credentials_empty_strings() {
+        let provider = ClaudeProvider::new().unwrap();
+        let credentials = Credentials {
+            org_id: Some("".to_string()),
+            session_key: Some("".to_string()),
+            api_key: None,
+        };
+        assert!(!provider.validate_credentials(&credentials));
+    }
+
+    #[test]
+    fn test_provider_id_and_name() {
+        let provider = ClaudeProvider::new().unwrap();
+        assert_eq!(provider.id(), "claude");
+        assert_eq!(provider.name(), "Claude");
+    }
+
+    #[test]
+    fn test_default_provider() {
+        let provider = ClaudeProvider::default();
+        assert_eq!(provider.id(), "claude");
     }
 }

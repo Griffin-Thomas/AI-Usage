@@ -4,6 +4,7 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Emitter, Manager,
 };
+use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_autostart::MacosLauncher;
 
 mod commands;
@@ -71,6 +72,25 @@ pub fn run() {
                         .level(log::LevelFilter::Info)
                         .build(),
                 )?;
+            }
+
+            // Send welcome notification on first launch (also triggers macOS permission prompt)
+            {
+                use tauri_plugin_store::StoreExt;
+                let store = app.store("settings.json")?;
+                let welcome_shown = store.get("welcome_shown").and_then(|v| v.as_bool()).unwrap_or(false);
+
+                if !welcome_shown {
+                    let _ = app
+                        .notification()
+                        .builder()
+                        .title("Welcome to AI Pulse!")
+                        .body("Thank you for using AI Pulse. Your usage will be monitored in the menu bar.")
+                        .show();
+
+                    store.set("welcome_shown", serde_json::json!(true));
+                    let _ = store.save();
+                }
             }
 
             // Set up system tray
