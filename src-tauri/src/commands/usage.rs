@@ -1,40 +1,45 @@
 use crate::error::{AppError, ProviderError};
 use crate::models::{Credentials, UsageData};
-use crate::providers::{ClaudeProvider, UsageProvider};
+use crate::providers::{ProviderMetadata, ProviderRegistry};
 use crate::services::CredentialService;
 use tauri::AppHandle;
 
+/// Get metadata for all providers (including blocked/planned ones)
+#[tauri::command]
+pub fn list_providers() -> Result<Vec<ProviderMetadata>, AppError> {
+    let registry = ProviderRegistry::new()?;
+    Ok(registry.all_metadata())
+}
+
+/// Fetch usage data for a specific provider
 #[tauri::command]
 pub async fn fetch_usage(app: AppHandle, provider: String) -> Result<UsageData, AppError> {
     log::info!("Fetching usage for provider: {}", provider);
+
+    // Get the provider from registry
+    let registry = ProviderRegistry::new()?;
+    let provider_impl = registry
+        .get(&provider)
+        .ok_or_else(|| ProviderError::HttpError(format!("Unknown or unavailable provider: {}", provider)))?;
 
     // Get credentials
     let credentials = CredentialService::get(&app, &provider)?
         .ok_or_else(|| ProviderError::MissingCredentials(provider.clone()))?;
 
-    // Get the appropriate provider
-    match provider.as_str() {
-        "claude" => {
-            let claude = ClaudeProvider::new()?;
-
-            if !claude.validate_credentials(&credentials) {
-                return Err(ProviderError::InvalidCredentials(
-                    "Missing org_id or session_key".to_string(),
-                )
-                .into());
-            }
-
-            let usage = claude.fetch_usage(&credentials).await?;
-            Ok(usage)
-        }
-        "codex" => {
-            // Codex not yet implemented
-            Err(ProviderError::HttpError("Codex provider not yet implemented".to_string()).into())
-        }
-        _ => Err(ProviderError::HttpError(format!("Unknown provider: {}", provider)).into()),
+    // Validate credentials
+    if !provider_impl.validate_credentials(&credentials) {
+        return Err(ProviderError::InvalidCredentials(
+            format!("Invalid credentials for {}", provider),
+        )
+        .into());
     }
+
+    // Fetch usage
+    let usage = provider_impl.fetch_usage(&credentials).await?;
+    Ok(usage)
 }
 
+/// Validate credentials for a specific provider
 #[tauri::command]
 pub async fn validate_credentials(
     provider: String,
@@ -42,12 +47,14 @@ pub async fn validate_credentials(
 ) -> Result<bool, AppError> {
     log::info!("Validating credentials for provider: {}", provider);
 
-    match provider.as_str() {
-        "claude" => {
-            let claude = ClaudeProvider::new()?;
-            Ok(claude.validate_credentials(&credentials))
+    let registry = ProviderRegistry::new()?;
+
+    match registry.get(&provider) {
+        Some(provider_impl) => Ok(provider_impl.validate_credentials(&credentials)),
+        None => {
+            // For blocked providers, just check if credentials are non-empty
+            log::warn!("Provider {} is not available, skipping validation", provider);
+            Ok(false)
         }
-        "codex" => Ok(true), // TODO: Implement Codex validation
-        _ => Ok(false),
     }
 }

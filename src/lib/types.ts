@@ -1,10 +1,31 @@
-export type ProviderId = "claude" | "codex";
+export type ProviderId = "claude" | "chatgpt" | "gemini";
 
 export interface UsageData {
   provider: ProviderId;
   timestamp: string;
   limits: UsageLimit[];
   raw?: unknown;
+}
+
+// ============================================================================
+// Provider Types
+// ============================================================================
+
+export type ProviderStatus = "available" | "blocked" | "planned";
+
+export interface CredentialField {
+  key: string;
+  label: string;
+  placeholder: string;
+  isSecret: boolean;
+}
+
+export interface ProviderMetadata {
+  id: ProviderId;
+  name: string;
+  status: ProviderStatus;
+  requiredCredentials: CredentialField[];
+  description?: string;
 }
 
 export interface UsageLimit {

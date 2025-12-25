@@ -115,67 +115,128 @@
 
 ---
 
-## Phase 4: OpenAI Codex Integration
+## Phase 4: OpenAI ChatGPT Integration
+
+**Status:** ⚠️ BLOCKED - OpenAI does not expose server-side usage tracking
 
 ### 4.1 Provider Abstraction
-- [ ] Define `UsageProvider` trait in Rust
-- [ ] Refactor `ClaudeAdapter` to implement trait
-- [ ] Create provider registry for dynamic provider loading
-- [ ] Update frontend to handle multiple providers
+- [x] Define `UsageProvider` trait in Rust (already exists)
+- [x] Refactor `ClaudeAdapter` to implement trait (already done as ClaudeProvider)
+- [x] Create provider registry for dynamic provider loading
+- [x] Update frontend to handle multiple providers
+- [x] Add `list_providers` command for UI
 
-### 4.2 Codex Adapter Implementation
-- [ ] Research Codex usage API/dashboard endpoints
-- [ ] Implement `CodexAdapter` struct
-- [ ] Handle Codex-specific auth (session token or API key)
-- [ ] Parse Codex usage data (5-hour window, weekly limits)
-- [ ] Map to common usage data model
+### 4.2 ChatGPT Integration Research (BLOCKED)
+- [x] Research ChatGPT usage API/dashboard endpoints
+- [x] Document findings in `docs/api-integration.md`
 
-### 4.3 Multi-Provider UI
-- [ ] Update dashboard to show multiple providers
-- [ ] Create provider switcher/tabs
-- [ ] Implement per-provider settings
-- [ ] Add aggregated usage view (total across providers)
-- [ ] Update tray icon to reflect worst-case provider status
-
-### 4.4 Codex-Specific Features
-- [ ] Show task/message-based limits
-- [ ] Display credits balance (if applicable)
-- [ ] Model-specific usage breakdown (GPT-4o, Mini, etc.)
-- [ ] CLI integration status indicator
+**Finding:** Unlike Claude's `/api/organizations/{id}/usage` which returns utilization percentage,
+ChatGPT only exposes `/public-api/conversation_limit` which returns cap limits (e.g., 80 messages)
+but NOT current usage count. See `docs/api-integration.md` for full details.
 
 ---
 
 ## Phase 5: Google Gemini Integration
 
+**Status:** ⚠️ BLOCKED - Requires complex Cloud Monitoring API setup
+
 ### 5.1 Gemini API Research
-- [ ] Research Gemini API usage/billing endpoints
-- [ ] Document authentication methods (API key, OAuth)
-- [ ] Identify usage data structure (token counts, rate limits)
-- [ ] Determine quota types (RPM, TPM, daily limits)
+- [x] Research Gemini API usage/billing endpoints
+- [x] Document authentication methods (API key, OAuth)
+- [x] Identify usage data structure (token counts, rate limits)
+- [x] Determine quota types (RPM, TPM, daily limits)
+- [x] Document findings in `docs/api-integration.md`
 
-### 5.2 Gemini Adapter Implementation
-- [ ] Create `GeminiAdapter` struct implementing `UsageProvider` trait
-- [ ] Implement authentication (API key storage in credentials)
-- [ ] Fetch usage data from Gemini API
-- [ ] Parse quota and usage response into common model
-- [ ] Handle error cases (401, 403, 429)
+**Finding:** Gemini Web (gemini.google.com) has no usage API like ChatGPT.
+Gemini Developer API usage CAN be tracked via Google Cloud Monitoring API, but requires:
+- Google Cloud project with billing enabled
+- Cloud Monitoring API enabled
+- Complex OAuth2/service account setup
+- MQL/PromQL query knowledge
 
-### 5.3 Gemini-Specific Features
-- [ ] Display token usage (input/output tokens)
-- [ ] Show rate limits (requests per minute, tokens per minute)
-- [ ] Model-specific breakdown (Gemini Pro, Flash, Ultra)
-- [ ] Billing/cost tracking if available
-- [ ] Free tier vs paid tier indication
+This complexity makes it impractical for a lightweight desktop app where users just want
+to paste credentials like they do with Claude.
 
-### 5.4 Multi-Provider Updates
-- [ ] Add Gemini to provider selector in Settings
-- [ ] Update dashboard to display Gemini usage cards
-- [ ] Include Gemini in tray icon worst-case calculation
-- [ ] Add Gemini-specific notification thresholds
+### 5.2-5.4 Gemini Implementation (DEFERRED)
+Deferred until Google provides a simpler usage API or community demand justifies the complexity.
+
+---
+
+## Phase 6: User Experience Improvements
+
+### 6.1 Onboarding & First Run
+- [ ] Create onboarding wizard for first-time setup
+- [ ] Add step-by-step credential extraction guide with screenshots
+- [ ] Show credential validation status during setup
+- [ ] Add "Test Connection" button before saving credentials
+- [ ] Provide helpful error messages with specific remediation steps
+
+### 6.2 Session Management
+- [ ] Detect when session key is about to expire (based on error patterns)
+- [ ] Show persistent banner when credentials need refresh
+- [ ] Add "Open Claude.ai" quick action to get fresh credentials
+- [ ] Implement session health indicator in tray menu
+- [ ] Auto-pause scheduler when session is invalid (avoid rate limiting)
+
+### 6.3 Quick Actions & Shortcuts
+- [ ] Add "Open Claude.ai" to tray menu (opens in default browser)
+- [ ] Implement global keyboard shortcut to show/hide window (configurable)
+- [ ] Add keyboard shortcut to copy current usage as text
+- [ ] Quick share usage stats (copy to clipboard as formatted text)
+- [ ] Add context menu to usage cards with actions
+
+### 6.4 Notification Improvements
+- [ ] Add configurable notification thresholds (not just 50/75/90%)
+- [ ] Implement "Do Not Disturb" schedule (e.g., mute during focus hours)
+- [ ] Show notification preview in settings
+
+### 6.5 Visual Polish
+- [ ] Add smooth animations to progress rings
+- [ ] Implement skeleton loading states
+- [ ] Add confetti animation when usage resets
+- [ ] Add compact/minimal view mode (smaller window)
+
+---
+
+## Phase 7: Power User Features
+
+### 7.1 Multi-Account Support
+- [ ] Allow multiple Claude accounts (work, personal, etc.)
+- [ ] Add account switcher in settings
+- [ ] Display usage for all accounts in dashboard
+- [ ] Per-account notification preferences
+- [ ] Show aggregated usage view across accounts
+
+### 7.2 Data & Export Enhancements
+- [ ] Add scheduled automatic exports (daily/weekly backup)
+- [ ] Export to more formats (Markdown report, PDF)
+- [ ] Import history from export files
+- [ ] Sync history across devices (optional cloud sync)
+- [ ] API endpoint for external integrations (localhost only)
+
+### 7.3 Advanced Analytics
+- [ ] Add trend forecasting based on historical patterns
+- [ ] Show day-of-week and time-of-day patterns
+- [ ] Calculate "usage efficiency" metrics
+- [ ] Compare usage across different time periods
+- [ ] Generate monthly usage reports (in-app or email)
+
+### 7.4 Developer Features
+- [ ] Add CLI companion tool (`ai-pulse status`, `ai-pulse history`)
+- [ ] Implement local API server for IDE integrations
+- [ ] Create VS Code extension showing usage in status bar
+- [ ] Webhook support to push usage events to external services
 
 ---
 
 ## Future Nice-to-Have
+
+### Multi-Provider UI (When Additional Providers Available)
+- [ ] Update dashboard to show multiple providers
+- [ ] Create provider switcher/tabs
+- [ ] Implement per-provider settings
+- [ ] Add aggregated usage view (total across providers)
+- [ ] Update tray icon to reflect worst-case provider status
 
 ### Usage Predictions
 - [ ] Implement usage rate calculation (messages/hour)
@@ -188,3 +249,26 @@
 - [ ] Minimize CPU usage when idle
 - [ ] Optimize bundle size (tree shaking, code splitting)
 - [ ] Implement efficient data caching
+
+### Platform-Specific Enhancements
+- [ ] macOS: Menu bar-only mode (no dock icon)
+- [ ] macOS: Today widget / Notification Center widget
+- [ ] Windows: Windows 11 widget support
+- [ ] Linux: GNOME extension alternative
+
+### Community Features
+- [ ] Anonymous usage statistics sharing (opt-in)
+- [ ] Compare your usage patterns with community averages
+- [ ] Leaderboard/gamification (optional)
+- [ ] Usage tips community wiki
+
+### AI-Powered Features
+- [ ] Smart usage optimization suggestions
+- [ ] Predict busy times based on global patterns
+- [ ] Natural language queries about usage ("How much did I use last Monday?")
+
+### Alternative Provider Workarounds
+- [ ] ChatGPT: Client-side message counting (local only)
+- [ ] ChatGPT: Manual usage input with reminders
+- [ ] Gemini: Optional Cloud Monitoring integration for advanced users
+- [ ] Generic provider template for custom integrations

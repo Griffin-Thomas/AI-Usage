@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { X, Save, Trash2, Eye, EyeOff, Loader2 } from "lucide-react";
+import { X, Save, Trash2, Eye, EyeOff, Loader2, Check, AlertTriangle, Clock } from "lucide-react";
 import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,9 +12,11 @@ import {
   getSettings,
   saveSettings,
   setRefreshInterval as setSchedulerInterval,
+  listProviders,
   type Credentials,
   type AppSettings,
 } from "@/lib/tauri";
+import type { ProviderMetadata, ProviderStatus } from "@/lib/types";
 import { useSettingsStore, useUsageStore } from "@/lib/store";
 import { updateTray } from "@/lib/tray";
 
@@ -63,6 +65,7 @@ export function Settings({ isOpen, onClose, onCredentialsSaved }: SettingsProps)
   const [trayDisplayLimit, setTrayDisplayLimit] = useState<"highest" | "five_hour" | "seven_day">("highest");
   const [launchAtStartup, setLaunchAtStartup] = useState(false);
   const [isTogglingAutostart, setIsTogglingAutostart] = useState(false);
+  const [providers, setProviders] = useState<ProviderMetadata[]>([]);
 
   const loadCredentials = useCallback(async () => {
     try {
@@ -78,6 +81,15 @@ export function Settings({ isOpen, onClose, onCredentialsSaved }: SettingsProps)
       }
     } catch (err) {
       console.error("Failed to load credentials:", err);
+    }
+  }, []);
+
+  const loadProviders = useCallback(async () => {
+    try {
+      const providerList = await listProviders();
+      setProviders(providerList);
+    } catch (err) {
+      console.error("Failed to load providers:", err);
     }
   }, []);
 
@@ -102,13 +114,14 @@ export function Settings({ isOpen, onClose, onCredentialsSaved }: SettingsProps)
     }
   }, [setSettings]);
 
-  // Load existing credentials and settings
+  // Load existing credentials, settings, and providers
   useEffect(() => {
     if (isOpen) {
       loadCredentials();
       loadSettings();
+      loadProviders();
     }
-  }, [isOpen, loadCredentials, loadSettings]);
+  }, [isOpen, loadCredentials, loadSettings, loadProviders]);
 
   const handleAutoStartToggle = async () => {
     setIsTogglingAutostart(true);
@@ -270,6 +283,28 @@ export function Settings({ isOpen, onClose, onCredentialsSaved }: SettingsProps)
     }
   };
 
+  const getStatusIcon = (status: ProviderStatus) => {
+    switch (status) {
+      case "available":
+        return <Check className="h-4 w-4 text-green-500" />;
+      case "blocked":
+        return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
+      case "planned":
+        return <Clock className="h-4 w-4 text-muted-foreground" />;
+    }
+  };
+
+  const getStatusLabel = (status: ProviderStatus) => {
+    switch (status) {
+      case "available":
+        return "Available";
+      case "blocked":
+        return "Blocked";
+      case "planned":
+        return "Coming Soon";
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -286,6 +321,48 @@ export function Settings({ isOpen, onClose, onCredentialsSaved }: SettingsProps)
             </Button>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Providers Overview */}
+            {providers.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-sm font-medium">Providers</h3>
+                <div className="grid gap-2">
+                  {providers.map((provider) => (
+                    <div
+                      key={provider.id}
+                      className={`flex items-start gap-3 p-3 rounded-lg border ${
+                        provider.status === "available"
+                          ? "border-green-500/30 bg-green-500/5"
+                          : provider.status === "blocked"
+                          ? "border-yellow-500/30 bg-yellow-500/5"
+                          : "border-muted bg-muted/5"
+                      }`}
+                    >
+                      <div className="mt-0.5">{getStatusIcon(provider.status)}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{provider.name}</span>
+                          <span className={`text-xs px-1.5 py-0.5 rounded ${
+                            provider.status === "available"
+                              ? "bg-green-500/20 text-green-600 dark:text-green-400"
+                              : provider.status === "blocked"
+                              ? "bg-yellow-500/20 text-yellow-600 dark:text-yellow-400"
+                              : "bg-muted text-muted-foreground"
+                          }`}>
+                            {getStatusLabel(provider.status)}
+                          </span>
+                        </div>
+                        {provider.description && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {provider.description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Claude Credentials */}
             <div className="space-y-4">
               <h3 className="text-sm font-medium">Claude Credentials</h3>
@@ -464,7 +541,7 @@ export function Settings({ isOpen, onClose, onCredentialsSaved }: SettingsProps)
             </div>
 
             {/* Help section */}
-            <div className="pt-4 border-t">
+            {/* <div className="pt-4 border-t">
               <h3 className="text-sm font-medium mb-2">How to get your credentials</h3>
               <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
                 <li>Log in to Claude.ai in your browser</li>
@@ -472,7 +549,7 @@ export function Settings({ isOpen, onClose, onCredentialsSaved }: SettingsProps)
                 <li>Open DevTools (F12) → Application → Cookies</li>
                 <li>Copy the value of the "sessionKey" cookie</li>
               </ol>
-            </div>
+            </div> */}
           </CardContent>
         </Card>
       </div>

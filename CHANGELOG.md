@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Provider registry for multi-provider support (Rust backend)
+- Settings now shows all providers with availability status (Available/Blocked)
+- `list_providers` command for frontend to query provider metadata
+- Comprehensive API integration research for ChatGPT and Gemini in `docs/api-integration.md`
+
+### Documentation
+- Documented ChatGPT integration blockers (no usage API available)
+- Documented Gemini integration blockers (complex Cloud Monitoring API required)
+
 ## [0.11.0] - 2025-12-24
 
 ### Added

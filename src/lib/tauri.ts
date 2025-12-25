@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type {
   UsageData,
   ProviderId,
+  ProviderMetadata,
   UsageHistoryEntry,
   HistoryMetadata,
   HistoryQuery,
@@ -26,6 +27,10 @@ export async function validateCredentials(
   credentials: Credentials
 ): Promise<boolean> {
   return invoke<boolean>("validate_credentials", { provider, credentials });
+}
+
+export async function listProviders(): Promise<ProviderMetadata[]> {
+  return invoke<ProviderMetadata[]>("list_providers");
 }
 
 // Credential commands
@@ -106,7 +111,7 @@ export interface NotificationSettings {
 }
 
 export interface ProviderConfig {
-  id: "claude" | "codex";
+  id: ProviderId;
   enabled: boolean;
   credentials: Record<string, string>;
 }

@@ -16,9 +16,9 @@ mod services;
 use commands::{
     clear_history, cleanup_history, delete_credentials, export_history_csv, export_history_json,
     fetch_usage, force_refresh, get_credentials, get_history_metadata, get_retention_policy,
-    get_scheduler_status, get_settings, get_usage_stats, has_credentials, query_history,
-    save_credentials, save_settings, set_refresh_interval, set_retention_policy, start_scheduler,
-    stop_scheduler, validate_credentials,
+    get_scheduler_status, get_settings, get_usage_stats, has_credentials, list_providers,
+    query_history, save_credentials, save_settings, set_refresh_interval, set_retention_policy,
+    start_scheduler, stop_scheduler, validate_credentials,
 };
 use services::{HistoryService, SchedulerService, SchedulerState};
 
@@ -49,6 +49,7 @@ pub fn run() {
             // Usage commands
             fetch_usage,
             validate_credentials,
+            list_providers,
             // Scheduler commands
             get_scheduler_status,
             start_scheduler,
