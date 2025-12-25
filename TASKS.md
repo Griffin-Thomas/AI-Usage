@@ -166,7 +166,8 @@ Deferred until Google provides a simpler usage API or community demand justifies
 
 ### 6.1 Onboarding & First Run
 - [x] Create onboarding wizard for first-time setup
-- [x] Add step-by-step credential extraction guide with screenshots
+- [x] Add step-by-step credential extraction guide (text-based with code examples)
+- [ ] Add screenshots to credential extraction guide
 - [x] Show credential validation status during setup
 - [x] Add "Test Connection" button before saving credentials
 - [x] Provide helpful error messages with specific remediation steps
