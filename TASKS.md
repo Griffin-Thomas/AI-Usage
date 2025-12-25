@@ -165,11 +165,11 @@ Deferred until Google provides a simpler usage API or community demand justifies
 ## Phase 6: User Experience Improvements
 
 ### 6.1 Onboarding & First Run
-- [ ] Create onboarding wizard for first-time setup
-- [ ] Add step-by-step credential extraction guide with screenshots
-- [ ] Show credential validation status during setup
-- [ ] Add "Test Connection" button before saving credentials
-- [ ] Provide helpful error messages with specific remediation steps
+- [x] Create onboarding wizard for first-time setup
+- [x] Add step-by-step credential extraction guide with screenshots
+- [x] Show credential validation status during setup
+- [x] Add "Test Connection" button before saving credentials
+- [x] Provide helpful error messages with specific remediation steps
 
 ### 6.2 Session Management
 - [ ] Detect when session key is about to expire (based on error patterns)

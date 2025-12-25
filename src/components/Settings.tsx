@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { X, Save, Trash2, Eye, EyeOff, Loader2, Check, AlertTriangle, Clock } from "lucide-react";
+import { X, Save, Trash2, Eye, EyeOff, Loader2, Check, AlertTriangle, Clock, Wifi } from "lucide-react";
 import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,8 +13,10 @@ import {
   saveSettings,
   setRefreshInterval as setSchedulerInterval,
   listProviders,
+  testConnection,
   type Credentials,
   type AppSettings,
+  type TestConnectionResult,
 } from "@/lib/tauri";
 import type { ProviderMetadata, ProviderStatus } from "@/lib/types";
 import { useSettingsStore, useUsageStore } from "@/lib/store";
@@ -53,6 +55,8 @@ export function Settings({ isOpen, onClose, onCredentialsSaved }: SettingsProps)
   const [showSessionKey, setShowSessionKey] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
+  const [testResult, setTestResult] = useState<TestConnectionResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [hasExisting, setHasExisting] = useState(false);
@@ -239,9 +243,45 @@ export function Settings({ isOpen, onClose, onCredentialsSaved }: SettingsProps)
     }
   };
 
+  const handleTestConnection = async () => {
+    setError(null);
+    setSuccess(null);
+    setTestResult(null);
+
+    if (!orgId.trim() || !sessionKey.trim()) {
+      setTestResult({
+        success: false,
+        error_code: "MISSING_FIELDS",
+        error_message: "Please fill in both fields",
+        hint: "Both Organization ID and Session Key are required.",
+      });
+      return;
+    }
+
+    setIsTesting(true);
+    try {
+      const credentials: Credentials = {
+        org_id: orgId.trim(),
+        session_key: sessionKey.trim(),
+      };
+      const result = await testConnection("claude", credentials);
+      setTestResult(result);
+    } catch (err) {
+      setTestResult({
+        success: false,
+        error_code: "UNKNOWN_ERROR",
+        error_message: err instanceof Error ? err.message : String(err),
+        hint: "An unexpected error occurred. Please try again.",
+      });
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
   const handleSave = async () => {
     setError(null);
     setSuccess(null);
+    setTestResult(null);
 
     if (!orgId.trim() || !sessionKey.trim()) {
       setError("Both Organization ID and Session Key are required");
@@ -410,6 +450,26 @@ export function Settings({ isOpen, onClose, onCredentialsSaved }: SettingsProps)
                 </p>
               </div>
 
+              {/* Test Connection Result */}
+              {testResult && (
+                <div
+                  className={`p-3 rounded-md text-sm ${
+                    testResult.success
+                      ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                      : "bg-destructive/10 text-destructive"
+                  }`}
+                >
+                  <p className="font-medium">
+                    {testResult.success
+                      ? "Connection successful!"
+                      : testResult.error_message}
+                  </p>
+                  {testResult.hint && !testResult.success && (
+                    <p className="text-xs mt-1 opacity-80">{testResult.hint}</p>
+                  )}
+                </div>
+              )}
+
               {error && (
                 <div className="p-3 rounded-md bg-destructive/10 text-destructive text-sm">
                   {error}
@@ -423,7 +483,19 @@ export function Settings({ isOpen, onClose, onCredentialsSaved }: SettingsProps)
               )}
 
               <div className="flex gap-2">
-                <Button onClick={handleSave} disabled={isSaving} className="flex-1">
+                <Button
+                  variant="outline"
+                  onClick={handleTestConnection}
+                  disabled={isTesting || isSaving || !orgId.trim() || !sessionKey.trim()}
+                >
+                  {isTesting ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Wifi className="h-4 w-4 mr-2" />
+                  )}
+                  {isTesting ? "Testing..." : "Test"}
+                </Button>
+                <Button onClick={handleSave} disabled={isSaving || isTesting} className="flex-1">
                   <Save className="h-4 w-4 mr-2" />
                   {isSaving ? "Saving..." : "Save Credentials"}
                 </Button>
@@ -431,7 +503,7 @@ export function Settings({ isOpen, onClose, onCredentialsSaved }: SettingsProps)
                   <Button
                     variant="destructive"
                     onClick={handleDelete}
-                    disabled={isDeleting}
+                    disabled={isDeleting || isTesting}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

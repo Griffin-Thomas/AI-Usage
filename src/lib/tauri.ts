@@ -29,6 +29,21 @@ export async function validateCredentials(
   return invoke<boolean>("validate_credentials", { provider, credentials });
 }
 
+// Test connection result with detailed status
+export interface TestConnectionResult {
+  success: boolean;
+  error_code: string | null;
+  error_message: string | null;
+  hint: string | null;
+}
+
+export async function testConnection(
+  provider: ProviderId,
+  credentials: Credentials
+): Promise<TestConnectionResult> {
+  return invoke<TestConnectionResult>("test_connection", { provider, credentials });
+}
+
 export async function listProviders(): Promise<ProviderMetadata[]> {
   return invoke<ProviderMetadata[]>("list_providers");
 }

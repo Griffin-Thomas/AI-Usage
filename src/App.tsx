@@ -3,9 +3,10 @@ import { listen } from "@tauri-apps/api/event";
 import { Dashboard } from "@/components/Dashboard";
 import { Settings } from "@/components/Settings";
 import { About } from "@/components/About";
+import { Onboarding } from "@/components/Onboarding";
 import { UpdateChecker } from "@/components/UpdateChecker";
 import { useUsageStore, useSettingsStore } from "@/lib/store";
-import { getSettings } from "@/lib/tauri";
+import { getSettings, hasCredentials } from "@/lib/tauri";
 
 function applyTheme(theme: "light" | "dark" | "system" | "pink") {
   const root = document.documentElement;
@@ -23,23 +24,31 @@ function applyTheme(theme: "light" | "dark" | "system" | "pink") {
 function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
   const { setUsage, setError } = useUsageStore();
   const { setSettings } = useSettingsStore();
 
-  // Initialize theme on app start
+  // Initialize app - check for credentials and load settings
   useEffect(() => {
-    const initSettings = async () => {
+    const initApp = async () => {
       try {
+        // Check if credentials exist
+        const hasCreds = await hasCredentials("claude");
+        setShowOnboarding(!hasCreds);
+
+        // Load settings
         const settings = await getSettings();
         setSettings(settings);
         applyTheme(settings.theme);
       } catch (err) {
-        console.error("Failed to load settings:", err);
+        console.error("Failed to initialize app:", err);
         // Apply dark theme as fallback
         applyTheme("dark");
+        // Show onboarding on error (safe default)
+        setShowOnboarding(true);
       }
     };
-    initSettings();
+    initApp();
 
     // Listen for system theme changes
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
@@ -96,6 +105,27 @@ function App() {
     setError("claude", null);
     setUsage("claude", null);
   }, [setError, setUsage]);
+
+  const handleOnboardingComplete = useCallback(() => {
+    setShowOnboarding(false);
+    // Trigger a fresh fetch after onboarding
+    setError("claude", null);
+    setUsage("claude", null);
+  }, [setError, setUsage]);
+
+  // Show nothing while checking for credentials
+  if (showOnboarding === null) {
+    return (
+      <div className="h-screen w-full bg-background flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  // Show onboarding for first-time users
+  if (showOnboarding) {
+    return <Onboarding onComplete={handleOnboardingComplete} />;
+  }
 
   return (
     <div className="h-screen w-full bg-background text-foreground">

@@ -8,10 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Onboarding wizard for first-time setup with step-by-step credential guide
+- Test Connection button to verify credentials before saving (in both onboarding and settings)
+- `test_connection` command with detailed error codes and user-friendly hints
 - Provider registry for multi-provider support (Rust backend)
 - Settings now shows all providers with availability status (Available/Blocked)
 - `list_providers` command for frontend to query provider metadata
 - Comprehensive API integration research for ChatGPT and Gemini in `docs/api-integration.md`
+
+### Improved
+- Error messages now include specific remediation steps for common issues (session expired, rate limited, etc.)
 
 ### Documentation
 - Documented ChatGPT integration blockers (no usage API available)
