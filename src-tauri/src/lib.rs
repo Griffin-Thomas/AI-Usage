@@ -6,7 +6,7 @@ use tauri::{
 };
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_notification::NotificationExt;
-use tauri_plugin_shell::ShellExt;
+use tauri_plugin_opener::OpenerExt;
 
 mod commands;
 mod error;
@@ -37,7 +37,8 @@ pub fn run() {
         ))
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .manage(Arc::new(SchedulerState::new()))
         .invoke_handler(tauri::generate_handler![
             // Credential commands
@@ -226,8 +227,7 @@ pub fn run() {
                     }
                     "open-claude" => {
                         // Open Claude.ai in default browser
-                        let shell = app.shell();
-                        let _ = shell.open("https://claude.ai", None::<tauri_plugin_shell::open::Program>);
+                        let _ = app.opener().open_url("https://claude.ai", None::<&str>);
                     }
                     "settings" => {
                         // Show window and emit settings event to frontend

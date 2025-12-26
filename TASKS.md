@@ -181,19 +181,19 @@ Deferred until Google provides a simpler usage API or community demand justifies
 
 ### 6.3 Quick Actions & Shortcuts
 - [x] Add "Open Claude.ai" to tray menu (opens in default browser)
-- [ ] Implement global keyboard shortcut to show/hide window (configurable)
-- [ ] Add keyboard shortcut to copy current usage as text
-- [ ] Quick share usage stats (copy to clipboard as formatted text)
+- [x] Implement global keyboard shortcut to show/hide window (configurable)
+- [x] Add keyboard shortcut to copy current usage as text
+- [x] Quick share usage stats (copy to clipboard as formatted text)
 - [ ] Add context menu to usage cards with actions
 
 ### 6.4 Notification Improvements
-- [ ] Add configurable notification thresholds (not just 50/75/90%)
+- [x] Add configurable notification thresholds (not just 50/75/90%)
 - [ ] Implement "Do Not Disturb" schedule (e.g., mute during focus hours)
 - [ ] Show notification preview in settings
 
 ### 6.5 Visual Polish
-- [ ] Add smooth animations to progress rings
-- [ ] Implement skeleton loading states
+- [x] Add smooth animations to progress rings
+- [x] Implement skeleton loading states
 - [ ] Add confetti animation when usage resets
 - [ ] Add compact/minimal view mode (smaller window)
 

@@ -97,6 +97,9 @@ pub struct AppSettings {
     /// Which limit to display in the menu bar: "highest", "five_hour", or "seven_day"
     #[serde(default = "default_tray_display_limit")]
     pub tray_display_limit: String,
+    /// Global keyboard shortcut to show/hide the window (e.g., "CommandOrControl+Shift+A")
+    #[serde(default)]
+    pub global_shortcut: Option<String>,
     pub notifications: NotificationSettings,
     pub providers: Vec<ProviderConfig>,
 }
@@ -223,6 +226,7 @@ impl Default for AppSettings {
             refresh_mode: "adaptive".to_string(),
             refresh_interval: 300,
             tray_display_limit: "highest".to_string(),
+            global_shortcut: None,
             notifications: NotificationSettings {
                 enabled: true,
                 thresholds: vec![50, 75, 90],

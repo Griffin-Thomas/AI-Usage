@@ -1,4 +1,4 @@
-import { cn, getUsageColorHex, formatPercentage } from "@/lib/utils";
+import { cn, getUsageColorHex } from "@/lib/utils";
 
 interface ProgressRingProps {
   value: number;
@@ -21,6 +21,7 @@ export function ProgressRing({
   const circumference = radius * 2 * Math.PI;
   const offset = circumference - (value / 100) * circumference;
   const color = getUsageColorHex(value);
+  const isHighUsage = value >= 90;
 
   return (
     <div className={cn("relative inline-flex items-center justify-center", className)}>
@@ -35,7 +36,7 @@ export function ProgressRing({
           strokeWidth={strokeWidth}
           className="text-muted"
         />
-        {/* Progress circle */}
+        {/* Progress circle with smooth animation */}
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -46,13 +47,22 @@ export function ProgressRing({
           strokeDasharray={circumference}
           strokeDashoffset={offset}
           strokeLinecap="round"
-          className="transition-all duration-500 ease-out"
+          className="transition-all duration-700 ease-out origin-center"
+          style={{
+            filter: isHighUsage ? `drop-shadow(0 0 6px ${color})` : undefined,
+          }}
         />
       </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
+      <div className={cn(
+        "absolute inset-0 flex flex-col items-center justify-center",
+        isHighUsage && "animate-pulse"
+      )}>
         {showPercentage && (
-          <span className="text-2xl font-bold" style={{ color }}>
-            {formatPercentage(value)}
+          <span
+            className="text-2xl font-bold tabular-nums transition-colors duration-500"
+            style={{ color }}
+          >
+            {Math.round(value)}%
           </span>
         )}
         {label && <span className="text-xs text-muted-foreground mt-1">{label}</span>}

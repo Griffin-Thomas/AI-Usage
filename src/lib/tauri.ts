@@ -128,6 +128,7 @@ export interface AppSettings {
   refreshMode: "adaptive" | "fixed";
   refreshInterval: 60 | 180 | 300 | 600;
   trayDisplayLimit: TrayDisplayLimit;
+  globalShortcut: string | null;
   notifications: NotificationSettings;
   providers: ProviderConfig[];
 }

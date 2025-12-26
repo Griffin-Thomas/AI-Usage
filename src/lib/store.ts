@@ -55,6 +55,7 @@ const defaultSettings: AppSettings = {
   refreshMode: "adaptive",
   refreshInterval: 300,
   trayDisplayLimit: "highest",
+  globalShortcut: null,
   notifications: {
     enabled: true,
     thresholds: [50, 75, 90],

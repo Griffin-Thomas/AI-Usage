@@ -40,3 +40,29 @@ export function formatTimeUntil(isoDate: string): string {
   }
   return `${minutes}m`;
 }
+
+import type { UsageData, UsageLimit } from "./types";
+
+export function formatUsageForClipboard(usage: UsageData): string {
+  const lines = [
+    `AI Pulse - ${usage.provider.charAt(0).toUpperCase() + usage.provider.slice(1)} Usage`,
+    `Updated: ${new Date(usage.timestamp).toLocaleString()}`,
+    "",
+    ...usage.limits.map((limit) => formatLimitForClipboard(limit)),
+  ];
+  return lines.join("\n");
+}
+
+export function formatLimitForClipboard(limit: UsageLimit): string {
+  const resetTime = formatTimeUntil(limit.resetsAt);
+  return `${limit.label}: ${Math.round(limit.utilization)}% (resets in ${resetTime})`;
+}
+
+export async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}

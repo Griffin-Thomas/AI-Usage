@@ -188,6 +188,7 @@ describe('Tauri API Integration', () => {
         refreshMode: 'adaptive',
         refreshInterval: 300,
         trayDisplayLimit: 'highest',
+        globalShortcut: null,
         notifications: {
           enabled: true,
           thresholds: [50, 75, 90],
@@ -219,6 +220,7 @@ describe('Tauri API Integration', () => {
         refreshMode: 'fixed',
         refreshInterval: 60,
         trayDisplayLimit: 'five_hour',
+        globalShortcut: 'CommandOrControl+Shift+A',
         notifications: {
           enabled: true,
           thresholds: [50, 75, 90],

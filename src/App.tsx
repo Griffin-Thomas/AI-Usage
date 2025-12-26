@@ -7,6 +7,7 @@ import { Onboarding } from "@/components/Onboarding";
 import { UpdateChecker } from "@/components/UpdateChecker";
 import { useUsageStore, useSettingsStore } from "@/lib/store";
 import { getSettings, hasCredentials, resumeScheduler } from "@/lib/tauri";
+import { useGlobalShortcut } from "@/hooks/useGlobalShortcut";
 
 function applyTheme(theme: "light" | "dark" | "system" | "pink") {
   const root = document.documentElement;
@@ -26,7 +27,10 @@ function App() {
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
   const { setUsage, setError } = useUsageStore();
-  const { setSettings } = useSettingsStore();
+  const { settings, setSettings } = useSettingsStore();
+
+  // Register global shortcut to show/hide window
+  useGlobalShortcut(settings?.globalShortcut ?? null);
 
   // Initialize app - check for credentials and load settings
   useEffect(() => {

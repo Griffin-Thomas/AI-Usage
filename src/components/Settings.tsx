@@ -610,6 +610,174 @@ export function Settings({ isOpen, onClose, onCredentialsSaved }: SettingsProps)
                 </p>
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="global-shortcut">Global Shortcut</Label>
+                <select
+                  id="global-shortcut"
+                  value={settings?.globalShortcut ?? ""}
+                  onChange={(e) => handleSettingChange("globalShortcut", e.target.value || null)}
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                >
+                  <option value="">None</option>
+                  <option value="CommandOrControl+Shift+A">⌘/Ctrl + Shift + A</option>
+                  <option value="CommandOrControl+Shift+P">⌘/Ctrl + Shift + P</option>
+                  <option value="CommandOrControl+Shift+U">⌘/Ctrl + Shift + U</option>
+                  <option value="Alt+Shift+A">Alt + Shift + A</option>
+                  <option value="Alt+Shift+P">Alt + Shift + P</option>
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  Press this shortcut anywhere to show/hide the window
+                </p>
+              </div>
+
+            </div>
+
+            {/* Notification Settings */}
+            <div className="pt-4 border-t space-y-4">
+              <h3 className="text-sm font-medium">Notifications</h3>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="notifications-enabled">Enable notifications</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Get alerted when usage reaches thresholds
+                  </p>
+                </div>
+                <button
+                  id="notifications-enabled"
+                  role="switch"
+                  aria-checked={settings?.notifications.enabled ?? true}
+                  onClick={() => {
+                    if (!settings) return;
+                    const newNotifications = {
+                      ...settings.notifications,
+                      enabled: !settings.notifications.enabled,
+                    };
+                    handleSettingChange("notifications", newNotifications);
+                  }}
+                  className={`
+                    relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent
+                    transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
+                    ${settings?.notifications.enabled ? "bg-primary" : "bg-input"}
+                  `}
+                >
+                  <span
+                    className={`
+                      pointer-events-none flex h-5 w-5 items-center justify-center rounded-full bg-background shadow-lg ring-0
+                      transition-transform
+                      ${settings?.notifications.enabled ? "translate-x-5" : "translate-x-0"}
+                    `}
+                  />
+                </button>
+              </div>
+
+              {settings?.notifications.enabled && (
+                <>
+                  <div className="space-y-3">
+                    <Label>Usage thresholds</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Notify when usage reaches these levels
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {[25, 50, 75, 90, 95].map((threshold) => {
+                        const isSelected = settings.notifications.thresholds.includes(threshold);
+                        return (
+                          <button
+                            key={threshold}
+                            onClick={() => {
+                              const newThresholds = isSelected
+                                ? settings.notifications.thresholds.filter((t) => t !== threshold)
+                                : [...settings.notifications.thresholds, threshold].sort((a, b) => a - b);
+                              const newNotifications = {
+                                ...settings.notifications,
+                                thresholds: newThresholds,
+                              };
+                              handleSettingChange("notifications", newNotifications);
+                            }}
+                            className={`
+                              px-3 py-1.5 rounded-full text-sm font-medium transition-colors
+                              ${isSelected
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted text-muted-foreground hover:bg-muted/80"
+                              }
+                            `}
+                          >
+                            {threshold}%
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="notify-reset">Notify on reset</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Alert when usage limits reset
+                      </p>
+                    </div>
+                    <button
+                      id="notify-reset"
+                      role="switch"
+                      aria-checked={settings.notifications.notifyOnReset}
+                      onClick={() => {
+                        const newNotifications = {
+                          ...settings.notifications,
+                          notifyOnReset: !settings.notifications.notifyOnReset,
+                        };
+                        handleSettingChange("notifications", newNotifications);
+                      }}
+                      className={`
+                        relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent
+                        transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
+                        ${settings.notifications.notifyOnReset ? "bg-primary" : "bg-input"}
+                      `}
+                    >
+                      <span
+                        className={`
+                          pointer-events-none flex h-5 w-5 items-center justify-center rounded-full bg-background shadow-lg ring-0
+                          transition-transform
+                          ${settings.notifications.notifyOnReset ? "translate-x-5" : "translate-x-0"}
+                        `}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="notify-expiry">Notify on session expiry</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Alert when credentials need refresh
+                      </p>
+                    </div>
+                    <button
+                      id="notify-expiry"
+                      role="switch"
+                      aria-checked={settings.notifications.notifyOnExpiry}
+                      onClick={() => {
+                        const newNotifications = {
+                          ...settings.notifications,
+                          notifyOnExpiry: !settings.notifications.notifyOnExpiry,
+                        };
+                        handleSettingChange("notifications", newNotifications);
+                      }}
+                      className={`
+                        relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent
+                        transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
+                        ${settings.notifications.notifyOnExpiry ? "bg-primary" : "bg-input"}
+                      `}
+                    >
+                      <span
+                        className={`
+                          pointer-events-none flex h-5 w-5 items-center justify-center rounded-full bg-background shadow-lg ring-0
+                          transition-transform
+                          ${settings.notifications.notifyOnExpiry ? "translate-x-5" : "translate-x-0"}
+                        `}
+                      />
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Help section */}

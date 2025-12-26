@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { RefreshCw, Settings, BarChart3, Activity } from "lucide-react";
+import { RefreshCw, Settings, BarChart3, Activity, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { UsageCard } from "@/components/UsageCard";
+import { UsageCard, UsageCardSkeleton } from "@/components/UsageCard";
 import { Analytics } from "@/components/Analytics";
 import { SessionBanner } from "@/components/SessionBanner";
 import { useUsageStore } from "@/lib/store";
 import { useUsage } from "@/hooks/useUsage";
+import { formatUsageForClipboard, copyToClipboard } from "@/lib/utils";
 import type { ProviderId } from "@/lib/types";
 
 type TabType = "usage" | "analytics";
@@ -18,8 +19,21 @@ interface DashboardProps {
 
 export function Dashboard({ provider = "claude", onSettingsClick }: DashboardProps) {
   const [activeTab, setActiveTab] = useState<TabType>("usage");
+  const [copied, setCopied] = useState(false);
   const { usage, isLoading, error, lastRefresh } = useUsageStore();
   const { refresh } = useUsage(provider);
+
+  const handleCopyUsage = async () => {
+    const currentUsage = usage[provider];
+    if (!currentUsage) return;
+
+    const text = formatUsageForClipboard(currentUsage);
+    const success = await copyToClipboard(text);
+    if (success) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   // Listen for menu events from native app menu (macOS)
   useEffect(() => {
@@ -47,16 +61,32 @@ export function Dashboard({ provider = "claude", onSettingsClick }: DashboardPro
         <h1 className="text-lg font-semibold">AI Pulse</h1>
         <div className="flex items-center gap-2">
           {activeTab === "usage" && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={refresh}
-              disabled={currentLoading}
-            >
-              <RefreshCw className={`h-4 w-4 ${currentLoading ? "animate-spin" : ""}`} />
-            </Button>
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleCopyUsage}
+                disabled={!currentUsage}
+                title="Copy usage to clipboard"
+              >
+                {copied ? (
+                  <Check className="h-4 w-4 text-green-500" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={refresh}
+                disabled={currentLoading}
+                title="Refresh usage"
+              >
+                <RefreshCw className={`h-4 w-4 ${currentLoading ? "animate-spin" : ""}`} />
+              </Button>
+            </>
           )}
-          <Button variant="ghost" size="icon" onClick={onSettingsClick}>
+          <Button variant="ghost" size="icon" onClick={onSettingsClick} title="Settings">
             <Settings className="h-4 w-4" />
           </Button>
         </div>
@@ -101,11 +131,9 @@ export function Dashboard({ provider = "claude", onSettingsClick }: DashboardPro
           <main className="flex-1 overflow-auto p-4">
 
             {currentLoading && !currentUsage && (
-              <div className="flex items-center justify-center h-64">
-                <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                  <RefreshCw className="h-8 w-8 animate-spin" />
-                  <p>Loading usage data...</p>
-                </div>
+              <div className="grid gap-4">
+                <UsageCardSkeleton />
+                <UsageCardSkeleton />
               </div>
             )}
 

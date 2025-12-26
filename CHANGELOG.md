@@ -5,6 +5,34 @@ All notable changes to AI Pulse will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- Fixed TypeScript errors in test files (missing `globalShortcut` property in mock AppSettings)
+
+### Changed
+- Added pre-release checklist to RELEASE.md requiring local build/test verification
+- Updated CLAUDE.md quality checklist with test and build requirements
+
+## [0.13.0] - 2025-12-26
+
+### Added
+- Global keyboard shortcut to show/hide window (configurable in Settings)
+  - Preset options: Cmd/Ctrl+Shift+A, Cmd/Ctrl+Shift+P, Cmd/Ctrl+Shift+U, Alt+Shift+A, Alt+Shift+P
+  - Works system-wide when app is running
+- Copy usage to clipboard functionality
+  - Copy button in header copies all usage data as formatted text
+  - Individual usage cards have copy button on hover
+- Configurable notification thresholds in Settings (25%, 50%, 75%, 90%, 95%)
+- Skeleton loading states for usage cards while data is loading
+- Enhanced progress ring animations
+  - Smoother transitions (700ms ease-out)
+  - Glow effect when usage is high (90%+)
+  - Pulse animation on percentage text for high usage
+
+### Changed
+- Replaced deprecated `tauri-plugin-shell` with `tauri-plugin-opener` for opening URLs
+
 ## [0.12.0] - 2025-12-25
 
 ### Added
