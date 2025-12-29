@@ -8,10 +8,10 @@ use tauri_plugin_notification::NotificationExt;
 
 /// Tracks which notifications have been sent to avoid duplicates
 pub struct NotificationState {
-    /// Set of (limit_id, threshold) pairs that have been notified
-    sent_thresholds: Mutex<HashSet<(String, u32)>>,
-    /// Set of limit_ids that have been notified for upcoming reset
-    sent_reset_warnings: Mutex<HashSet<String>>,
+    /// Set of (account_id, limit_id, threshold) tuples that have been notified
+    sent_thresholds: Mutex<HashSet<(String, String, u32)>>,
+    /// Set of (account_id, limit_id) pairs that have been notified for upcoming reset
+    sent_reset_warnings: Mutex<HashSet<(String, String)>>,
 }
 
 impl Default for NotificationState {
@@ -28,46 +28,48 @@ impl NotificationState {
         Self::default()
     }
 
-    /// Check if a threshold notification was already sent
-    pub fn was_threshold_notified(&self, limit_id: &str, threshold: u32) -> bool {
+    /// Check if a threshold notification was already sent for this account
+    pub fn was_threshold_notified(&self, account_id: &str, limit_id: &str, threshold: u32) -> bool {
         let sent = self.sent_thresholds.lock().unwrap();
-        sent.contains(&(limit_id.to_string(), threshold))
+        sent.contains(&(account_id.to_string(), limit_id.to_string(), threshold))
     }
 
-    /// Mark a threshold notification as sent
-    pub fn mark_threshold_notified(&self, limit_id: &str, threshold: u32) {
+    /// Mark a threshold notification as sent for this account
+    pub fn mark_threshold_notified(&self, account_id: &str, limit_id: &str, threshold: u32) {
         let mut sent = self.sent_thresholds.lock().unwrap();
-        sent.insert((limit_id.to_string(), threshold));
+        sent.insert((account_id.to_string(), limit_id.to_string(), threshold));
     }
 
     /// Clear threshold notifications for a limit (called when usage drops or resets)
-    pub fn clear_threshold(&self, limit_id: &str, threshold: u32) {
+    pub fn clear_threshold(&self, account_id: &str, limit_id: &str, threshold: u32) {
         let mut sent = self.sent_thresholds.lock().unwrap();
-        sent.remove(&(limit_id.to_string(), threshold));
+        sent.remove(&(account_id.to_string(), limit_id.to_string(), threshold));
     }
 
-    /// Clear all thresholds above a certain value for a limit
-    pub fn clear_thresholds_above(&self, limit_id: &str, current_percent: u32) {
+    /// Clear all thresholds above a certain value for a limit on this account
+    pub fn clear_thresholds_above(&self, account_id: &str, limit_id: &str, current_percent: u32) {
         let mut sent = self.sent_thresholds.lock().unwrap();
-        sent.retain(|(id, thresh)| !(id == limit_id && *thresh > current_percent));
+        sent.retain(|(acc, id, thresh)| {
+            !(acc == account_id && id == limit_id && *thresh > current_percent)
+        });
     }
 
-    /// Check if reset warning was sent
-    pub fn was_reset_warning_sent(&self, limit_id: &str) -> bool {
+    /// Check if reset warning was sent for this account
+    pub fn was_reset_warning_sent(&self, account_id: &str, limit_id: &str) -> bool {
         let sent = self.sent_reset_warnings.lock().unwrap();
-        sent.contains(limit_id)
+        sent.contains(&(account_id.to_string(), limit_id.to_string()))
     }
 
-    /// Mark reset warning as sent
-    pub fn mark_reset_warning_sent(&self, limit_id: &str) {
+    /// Mark reset warning as sent for this account
+    pub fn mark_reset_warning_sent(&self, account_id: &str, limit_id: &str) {
         let mut sent = self.sent_reset_warnings.lock().unwrap();
-        sent.insert(limit_id.to_string());
+        sent.insert((account_id.to_string(), limit_id.to_string()));
     }
 
     /// Clear reset warning (called after reset occurs)
-    pub fn clear_reset_warning(&self, limit_id: &str) {
+    pub fn clear_reset_warning(&self, account_id: &str, limit_id: &str) {
         let mut sent = self.sent_reset_warnings.lock().unwrap();
-        sent.remove(limit_id);
+        sent.remove(&(account_id.to_string(), limit_id.to_string()));
     }
 }
 
@@ -91,19 +93,22 @@ impl NotificationService {
             return;
         }
 
+        let account_id = &usage.account_id;
+        let account_name = &usage.account_name;
+
         for limit in &usage.limits {
             // utilization is already a percentage (0-100) from the API
             let current_percent = limit.utilization as u32;
 
             // Clear thresholds that are now above current usage (usage dropped)
-            state.clear_thresholds_above(&limit.id, current_percent);
+            state.clear_thresholds_above(account_id, &limit.id, current_percent);
 
             // Check threshold notifications
-            Self::check_threshold_notifications(app, state, limit, &settings);
+            Self::check_threshold_notifications(app, state, account_id, account_name, limit, &settings);
 
             // Check for reset notifications
             if settings.notifications.notify_on_reset {
-                Self::check_reset_notification(app, state, limit, previous_usage);
+                Self::check_reset_notification(app, state, account_id, account_name, limit, previous_usage);
             }
         }
     }
@@ -112,6 +117,8 @@ impl NotificationService {
     fn check_threshold_notifications(
         app: &AppHandle,
         state: &NotificationState,
+        account_id: &str,
+        account_name: &str,
         limit: &UsageLimit,
         settings: &AppSettings,
     ) {
@@ -119,28 +126,39 @@ impl NotificationService {
         let current_percent = limit.utilization as u32;
 
         log::info!(
-            "Checking notifications for {}: utilization={}, current_percent={}%",
+            "Checking notifications for {} ({}): utilization={}, current_percent={}%",
             limit.id,
+            account_name,
             limit.utilization,
             current_percent
         );
 
         for &threshold in &settings.notifications.thresholds {
-            if current_percent >= threshold && !state.was_threshold_notified(&limit.id, threshold) {
-                // Send notification
+            if current_percent >= threshold && !state.was_threshold_notified(account_id, &limit.id, threshold) {
+                // Include account name in notification if it's not "Default"
                 let title = format!("{}% Usage Alert", threshold);
-                let body = format!(
-                    "{} is at {}% usage",
-                    limit.label,
-                    current_percent.min(100)
-                );
+                let body = if account_name != "Default" && !account_name.is_empty() {
+                    format!(
+                        "[{}] {} is at {}% usage",
+                        account_name,
+                        limit.label,
+                        current_percent.min(100)
+                    )
+                } else {
+                    format!(
+                        "{} is at {}% usage",
+                        limit.label,
+                        current_percent.min(100)
+                    )
+                };
 
                 if Self::send_notification(app, &title, &body) {
-                    state.mark_threshold_notified(&limit.id, threshold);
+                    state.mark_threshold_notified(account_id, &limit.id, threshold);
                     log::info!(
-                        "Sent {}% threshold notification for {}",
+                        "Sent {}% threshold notification for {} ({})",
                         threshold,
-                        limit.id
+                        limit.id,
+                        account_name
                     );
                 }
             }
@@ -151,6 +169,8 @@ impl NotificationService {
     fn check_reset_notification(
         app: &AppHandle,
         state: &NotificationState,
+        account_id: &str,
+        account_name: &str,
         limit: &UsageLimit,
         previous_usage: Option<&UsageData>,
     ) {
@@ -164,31 +184,46 @@ impl NotificationService {
                 // If usage dropped significantly (more than 50%) and was previously high
                 if prev_percent >= 50 && curr_percent < prev_percent.saturating_sub(40) {
                     let title = "Usage Reset";
-                    let body = format!(
-                        "{} has reset! Now at {}%",
-                        limit.label,
-                        curr_percent
-                    );
+                    let body = if account_name != "Default" && !account_name.is_empty() {
+                        format!(
+                            "[{}] {} has reset! Now at {}%",
+                            account_name,
+                            limit.label,
+                            curr_percent
+                        )
+                    } else {
+                        format!(
+                            "{} has reset! Now at {}%",
+                            limit.label,
+                            curr_percent
+                        )
+                    };
 
                     Self::send_notification(app, title, &body);
-                    state.clear_reset_warning(&limit.id);
+                    state.clear_reset_warning(account_id, &limit.id);
 
                     // Clear all threshold notifications for this limit
                     for thresh in [50, 75, 90, 100] {
-                        state.clear_threshold(&limit.id, thresh);
+                        state.clear_threshold(account_id, &limit.id, thresh);
                     }
 
                     // Emit event for frontend confetti animation
                     let _ = app.emit("usage-reset", &limit.id);
 
-                    log::info!("Sent reset notification for {}", limit.id);
+                    log::info!("Sent reset notification for {} ({})", limit.id, account_name);
                 }
             }
         }
     }
 
     /// Send notification for upcoming reset (within 1 hour)
-    pub fn check_upcoming_reset(app: &AppHandle, state: &NotificationState, limit: &UsageLimit) {
+    pub fn check_upcoming_reset(
+        app: &AppHandle,
+        state: &NotificationState,
+        account_id: &str,
+        account_name: &str,
+        limit: &UsageLimit,
+    ) {
         let settings = match SettingsService::get(app) {
             Ok(s) => s,
             Err(_) => return,
@@ -207,18 +242,25 @@ impl NotificationService {
         if time_until_reset > Duration::zero()
             && time_until_reset <= Duration::hours(1)
             && current_percent >= 75
-            && !state.was_reset_warning_sent(&limit.id)
+            && !state.was_reset_warning_sent(account_id, &limit.id)
         {
             let minutes = time_until_reset.num_minutes();
             let title = "Limit Reset Soon";
-            let body = format!(
-                "{} will reset in {} minutes (currently at {}%)",
-                limit.label, minutes, current_percent
-            );
+            let body = if account_name != "Default" && !account_name.is_empty() {
+                format!(
+                    "[{}] {} will reset in {} minutes (currently at {}%)",
+                    account_name, limit.label, minutes, current_percent
+                )
+            } else {
+                format!(
+                    "{} will reset in {} minutes (currently at {}%)",
+                    limit.label, minutes, current_percent
+                )
+            };
 
             if Self::send_notification(app, title, &body) {
-                state.mark_reset_warning_sent(&limit.id);
-                log::info!("Sent upcoming reset notification for {}", limit.id);
+                state.mark_reset_warning_sent(account_id, &limit.id);
+                log::info!("Sent upcoming reset notification for {} ({})", limit.id, account_name);
             }
         }
     }

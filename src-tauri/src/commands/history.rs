@@ -12,6 +12,7 @@ pub async fn query_history(
 
     let query = query.unwrap_or(HistoryQuery {
         provider: None,
+        account_id: None,
         start_date: None,
         end_date: None,
         limit: Some(1000),

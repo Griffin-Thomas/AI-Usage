@@ -15,12 +15,14 @@ mod providers;
 mod services;
 
 use commands::{
-    clear_history, cleanup_history, delete_credentials, export_history_csv, export_history_json,
-    fetch_usage, force_refresh, get_credentials, get_history_metadata, get_retention_policy,
-    get_scheduler_status, get_session_status, get_settings, get_usage_stats, has_credentials,
-    list_providers, query_history, resume_scheduler, save_credentials, save_settings,
-    send_test_notification, set_refresh_interval, set_retention_policy, start_scheduler,
-    stop_scheduler, test_connection, validate_credentials,
+    clear_history, cleanup_history, delete_account, delete_credentials, export_history_csv,
+    export_history_json, fetch_usage, fetch_usage_for_account, force_refresh, get_account,
+    get_credentials, get_history_metadata, get_retention_policy, get_scheduler_status,
+    get_session_status, get_settings, get_usage_stats, has_credentials, list_accounts,
+    list_providers, query_history, resume_scheduler, save_account, save_credentials,
+    save_settings, send_test_notification, set_refresh_interval, set_retention_policy,
+    start_scheduler, stop_scheduler, test_account_connection, test_connection,
+    validate_credentials,
 };
 use services::{HistoryService, SchedulerService, SchedulerState};
 
@@ -41,17 +43,24 @@ pub fn run() {
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .manage(Arc::new(SchedulerState::new()))
         .invoke_handler(tauri::generate_handler![
-            // Credential commands
+            // Credential commands (legacy)
             get_credentials,
             save_credentials,
             delete_credentials,
             has_credentials,
+            // Account commands (multi-account)
+            list_accounts,
+            get_account,
+            save_account,
+            delete_account,
+            test_account_connection,
             // Settings commands
             get_settings,
             save_settings,
             send_test_notification,
             // Usage commands
             fetch_usage,
+            fetch_usage_for_account,
             validate_credentials,
             test_connection,
             list_providers,

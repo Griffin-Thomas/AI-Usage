@@ -14,10 +14,13 @@ A cross-platform desktop application for monitoring AI service usage quotas (Cla
 
 ## Features
 
-- **Real-time Usage Tracking** - Monitor your Claude API usage limits
+- **Real-time Usage Tracking** - Monitor your Claude usage limits
+- **Multi-Account Support** - Track multiple Claude accounts (work, personal, etc.)
 - **System Tray Integration** - Dynamic progress ring icon shows usage at a glance
-- **Smart Notifications** - Alerts at 50%, 75%, 90% usage thresholds
-- **Background Refresh** - Automatic updates with adaptive intervals
+- **Smart Notifications** - Alerts at configurable usage thresholds
+- **Background Refresh** - Automatic usage updates with adaptive intervals
+- **Usage Analytics** - Historical trends, heatmaps, and usage patterns
+- **Auto-Updates** - Automatic update checks with one-click install
 - **Cross-platform** - macOS, Linux, Windows
 
 ## Installation
@@ -43,10 +46,14 @@ Download the `.AppImage` from [Releases](https://github.com/Griffin-Thomas/AI-Pu
 ## Configure Credentials
 
 1. Click the **Settings** icon (gear) in the app header
-2. Enter your Claude credentials:
+2. Click **Add Account** in the Accounts section
+3. Enter your Claude credentials:
+   - **Account Name**: A friendly name (e.g., "Personal", "Work")
    - **Organization ID**: Found in your Claude.ai URL (`claude.ai/settings/organization/[org-id]`)
    - **Session Key**: Found in browser DevTools → Application → Cookies → `sessionKey`
-3. Click **Save Credentials**
+4. Click **Test** to verify the connection, then **Add Account**
+
+You can add multiple accounts to track usage across different Claude subscriptions.
 
 For detailed instructions, see the [User Guide](docs/user-guide.md).
 

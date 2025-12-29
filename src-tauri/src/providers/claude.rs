@@ -138,6 +138,8 @@ impl ClaudeProvider {
 
         Ok(UsageData {
             provider: "claude".to_string(),
+            account_id: String::new(),  // Will be set by caller
+            account_name: String::new(), // Will be set by caller
             timestamp: Utc::now(),
             limits,
             raw: Some(serde_json::to_value(&response).unwrap_or_default()),

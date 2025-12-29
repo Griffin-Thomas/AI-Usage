@@ -1,23 +1,18 @@
 import { useState, useEffect, useCallback } from "react";
-import { X, Save, Trash2, Eye, EyeOff, Loader2, Check, AlertTriangle, Clock, Wifi, Bell } from "lucide-react";
+import { X, Loader2, Check, AlertTriangle, Clock, Bell } from "lucide-react";
 import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AccountManager } from "@/components/AccountManager";
 import {
-  getCredentials,
-  saveCredentials,
-  deleteCredentials,
   getSettings,
   saveSettings,
   setRefreshInterval as setSchedulerInterval,
   listProviders,
-  testConnection,
   sendTestNotification,
-  type Credentials,
   type AppSettings,
-  type TestConnectionResult,
 } from "@/lib/tauri";
 import type { ProviderMetadata, ProviderStatus } from "@/lib/types";
 import { useSettingsStore, useUsageStore } from "@/lib/store";
@@ -51,43 +46,15 @@ const TRAY_DISPLAY_OPTIONS = [
 ] as const;
 
 export function Settings({ isOpen, onClose, onCredentialsSaved }: SettingsProps) {
-  const [orgId, setOrgId] = useState("");
-  const [sessionKey, setSessionKey] = useState("");
-  const [showSessionKey, setShowSessionKey] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isTesting, setIsTesting] = useState(false);
-  const [testResult, setTestResult] = useState<TestConnectionResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [hasExisting, setHasExisting] = useState(false);
-
   // Settings state
   const { settings, setSettings } = useSettingsStore();
-  const { usage } = useUsageStore();
+  const { getAllUsage } = useUsageStore();
   const [refreshInterval, setRefreshInterval] = useState<0 | 60 | 180 | 300 | 600>(300);
   const [theme, setTheme] = useState<"light" | "dark" | "system" | "pink">("dark");
   const [trayDisplayLimit, setTrayDisplayLimit] = useState<"highest" | "five_hour" | "seven_day">("highest");
   const [launchAtStartup, setLaunchAtStartup] = useState(false);
   const [isTogglingAutostart, setIsTogglingAutostart] = useState(false);
   const [providers, setProviders] = useState<ProviderMetadata[]>([]);
-
-  const loadCredentials = useCallback(async () => {
-    try {
-      const creds = await getCredentials("claude");
-      if (creds) {
-        setOrgId(creds.org_id || "");
-        setSessionKey(creds.session_key || "");
-        setHasExisting(true);
-      } else {
-        setOrgId("");
-        setSessionKey("");
-        setHasExisting(false);
-      }
-    } catch (err) {
-      console.error("Failed to load credentials:", err);
-    }
-  }, []);
 
   const loadProviders = useCallback(async () => {
     try {
@@ -119,14 +86,13 @@ export function Settings({ isOpen, onClose, onCredentialsSaved }: SettingsProps)
     }
   }, [setSettings]);
 
-  // Load existing credentials, settings, and providers
+  // Load settings and providers on open
   useEffect(() => {
     if (isOpen) {
-      loadCredentials();
       loadSettings();
       loadProviders();
     }
-  }, [isOpen, loadCredentials, loadSettings, loadProviders]);
+  }, [isOpen, loadSettings, loadProviders]);
 
   const handleAutoStartToggle = async () => {
     setIsTogglingAutostart(true);
@@ -218,10 +184,10 @@ export function Settings({ isOpen, onClose, onCredentialsSaved }: SettingsProps)
 
     setSettings(newSettings);
 
-    // Immediately update the tray with the new setting
-    const currentUsage = usage.claude;
-    if (currentUsage) {
-      await updateTray(currentUsage, value);
+    // Immediately update the tray with the new setting (use first available usage)
+    const allUsage = getAllUsage();
+    if (allUsage.length > 0) {
+      await updateTray(allUsage[0], value);
     }
 
     try {
@@ -241,86 +207,6 @@ export function Settings({ isOpen, onClose, onCredentialsSaved }: SettingsProps)
       root.classList.add("dark");
     } else if (newTheme === "pink") {
       root.classList.add("pink");
-    }
-  };
-
-  const handleTestConnection = async () => {
-    setError(null);
-    setSuccess(null);
-    setTestResult(null);
-
-    if (!orgId.trim() || !sessionKey.trim()) {
-      setTestResult({
-        success: false,
-        error_code: "MISSING_FIELDS",
-        error_message: "Please fill in both fields",
-        hint: "Both Organization ID and Session Key are required.",
-      });
-      return;
-    }
-
-    setIsTesting(true);
-    try {
-      const credentials: Credentials = {
-        org_id: orgId.trim(),
-        session_key: sessionKey.trim(),
-      };
-      const result = await testConnection("claude", credentials);
-      setTestResult(result);
-    } catch (err) {
-      setTestResult({
-        success: false,
-        error_code: "UNKNOWN_ERROR",
-        error_message: err instanceof Error ? err.message : String(err),
-        hint: "An unexpected error occurred. Please try again.",
-      });
-    } finally {
-      setIsTesting(false);
-    }
-  };
-
-  const handleSave = async () => {
-    setError(null);
-    setSuccess(null);
-    setTestResult(null);
-
-    if (!orgId.trim() || !sessionKey.trim()) {
-      setError("Both Organization ID and Session Key are required");
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const credentials: Credentials = {
-        org_id: orgId.trim(),
-        session_key: sessionKey.trim(),
-      };
-      await saveCredentials("claude", credentials);
-      setSuccess("Credentials saved successfully");
-      setHasExisting(true);
-      onCredentialsSaved?.();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    setError(null);
-    setSuccess(null);
-    setIsDeleting(true);
-
-    try {
-      await deleteCredentials("claude");
-      setOrgId("");
-      setSessionKey("");
-      setHasExisting(false);
-      setSuccess("Credentials deleted");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setIsDeleting(false);
     }
   };
 
@@ -404,113 +290,8 @@ export function Settings({ isOpen, onClose, onCredentialsSaved }: SettingsProps)
               </div>
             )}
 
-            {/* Claude Credentials */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-medium">Claude Credentials</h3>
-
-              <div className="space-y-2">
-                <Label htmlFor="org-id">Organization ID</Label>
-                <Input
-                  id="org-id"
-                  placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                  value={orgId}
-                  onChange={(e) => setOrgId(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Find this in your Claude.ai URL: claude.ai/settings/organization/[org-id]
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="session-key">Session Key</Label>
-                <div className="relative">
-                  <Input
-                    id="session-key"
-                    type={showSessionKey ? "text" : "password"}
-                    placeholder="sk-ant-..."
-                    value={sessionKey}
-                    onChange={(e) => setSessionKey(e.target.value)}
-                    className="pr-10"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-0 top-0 h-full px-3"
-                    onClick={() => setShowSessionKey(!showSessionKey)}
-                  >
-                    {showSessionKey ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Find this in browser DevTools: Application → Cookies → sessionKey
-                </p>
-              </div>
-
-              {/* Test Connection Result */}
-              {testResult && (
-                <div
-                  className={`p-3 rounded-md text-sm ${
-                    testResult.success
-                      ? "bg-green-500/10 text-green-600 dark:text-green-400"
-                      : "bg-destructive/10 text-destructive"
-                  }`}
-                >
-                  <p className="font-medium">
-                    {testResult.success
-                      ? "Connection successful!"
-                      : testResult.error_message}
-                  </p>
-                  {testResult.hint && !testResult.success && (
-                    <p className="text-xs mt-1 opacity-80">{testResult.hint}</p>
-                  )}
-                </div>
-              )}
-
-              {error && (
-                <div className="p-3 rounded-md bg-destructive/10 text-destructive text-sm">
-                  {error}
-                </div>
-              )}
-
-              {success && (
-                <div className="p-3 rounded-md bg-green-500/10 text-green-600 dark:text-green-400 text-sm">
-                  {success}
-                </div>
-              )}
-
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={handleTestConnection}
-                  disabled={isTesting || isSaving || !orgId.trim() || !sessionKey.trim()}
-                >
-                  {isTesting ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Wifi className="h-4 w-4 mr-2" />
-                  )}
-                  {isTesting ? "Testing..." : "Test"}
-                </Button>
-                <Button onClick={handleSave} disabled={isSaving || isTesting} className="flex-1">
-                  <Save className="h-4 w-4 mr-2" />
-                  {isSaving ? "Saving..." : "Save Credentials"}
-                </Button>
-                {hasExisting && (
-                  <Button
-                    variant="destructive"
-                    onClick={handleDelete}
-                    disabled={isDeleting || isTesting}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            </div>
+            {/* Account Manager */}
+            <AccountManager onAccountsChanged={onCredentialsSaved} />
 
             {/* App Settings */}
             <div className="pt-4 border-t space-y-4">
@@ -629,34 +410,6 @@ export function Settings({ isOpen, onClose, onCredentialsSaved }: SettingsProps)
                 <p className="text-xs text-muted-foreground">
                   Press this shortcut anywhere to show/hide the window
                 </p>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="compact-view">Compact view</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Show smaller usage cards for a minimal look
-                  </p>
-                </div>
-                <button
-                  id="compact-view"
-                  role="switch"
-                  aria-checked={settings?.compactView ?? false}
-                  onClick={() => handleSettingChange("compactView", !settings?.compactView)}
-                  className={`
-                    relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent
-                    transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
-                    ${settings?.compactView ? "bg-primary" : "bg-input"}
-                  `}
-                >
-                  <span
-                    className={`
-                      pointer-events-none flex h-5 w-5 items-center justify-center rounded-full bg-background shadow-lg ring-0
-                      transition-transform
-                      ${settings?.compactView ? "translate-x-5" : "translate-x-0"}
-                    `}
-                  />
-                </button>
               </div>
 
             </div>

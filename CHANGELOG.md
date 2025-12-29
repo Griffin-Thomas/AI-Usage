@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0] - 2025-12-29
+
+### Added
+- Multi-account support for Claude credentials
+  - New AccountManager component in Settings for managing multiple accounts
+  - Each account has a name, organization ID, and session key
+  - Test connection for individual accounts before saving
+  - Edit and delete existing accounts
+- Automatic credential migration from v1 (single account) to v2 (multi-account) format
+- Scheduler fetches usage for all configured accounts in parallel
+- Usage data now includes account_id and account_name for multi-account tracking
+- History entries track which account the usage data came from
+
+### Removed
+- Compact view mode setting (smaller usage cards option)
+
 ## [0.14.0] - 2025-12-26
 
 ### Added

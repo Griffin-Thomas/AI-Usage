@@ -1,7 +1,31 @@
 export type ProviderId = "claude" | "chatgpt" | "gemini";
 
+// ============================================================================
+// Account Types (Multi-Account Support)
+// ============================================================================
+
+export interface Credentials {
+  org_id?: string;
+  session_key?: string;
+  api_key?: string;
+}
+
+export interface Account {
+  id: string;
+  name: string;
+  provider: ProviderId;
+  credentials: Credentials;
+  createdAt: string;
+}
+
+// ============================================================================
+// Usage Types
+// ============================================================================
+
 export interface UsageData {
   provider: ProviderId;
+  accountId: string;
+  accountName: string;
   timestamp: string;
   limits: UsageLimit[];
   raw?: unknown;
@@ -56,6 +80,8 @@ export interface LimitUsage {
 export interface UsageHistoryEntry {
   id: string;
   provider: ProviderId;
+  accountId: string;
+  accountName: string;
   timestamp: string;
   limits: UsageLimitSnapshot[];
 }
@@ -76,6 +102,7 @@ export interface HistoryMetadata {
 
 export interface HistoryQuery {
   provider?: ProviderId;
+  accountId?: string;
   startDate?: string;
   endDate?: string;
   limit?: number;

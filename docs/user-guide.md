@@ -6,8 +6,10 @@ A comprehensive guide to using AI Pulse for monitoring your AI service usage.
 
 - [Getting Started](#getting-started)
 - [Dashboard](#dashboard)
+- [Multi-Account Support](#multi-account-support)
 - [System Tray](#system-tray)
 - [Settings](#settings)
+- [Updates](#updates)
 - [Analytics](#analytics)
 - [Notifications](#notifications)
 - [Credential Setup](#credential-setup)
@@ -115,6 +117,50 @@ Click the refresh button (circular arrow) to manually fetch the latest usage dat
 
 ---
 
+## Multi-Account Support
+
+AI Pulse supports tracking multiple Claude accounts simultaneously, perfect for users who have separate work and personal accounts.
+
+### Adding Multiple Accounts
+
+1. Go to **Settings** (gear icon)
+2. In the **Accounts** section, click **Add Account**
+3. Enter a friendly name (e.g., "Work", "Personal")
+4. Enter the Organization ID and Session Key for that account
+5. Click **Test** to verify, then **Add Account**
+
+Repeat for each account you want to track.
+
+### Dashboard Display
+
+When you have multiple accounts:
+- Each account's usage is displayed in its own section
+- Account names appear as headers above each group of usage cards
+- The dashboard shows all accounts at once for easy comparison
+
+With a single account, no headers are shown (the UI remains unchanged from before).
+
+### Tray Icon Behaviour
+
+The system tray icon shows the **worst-case** usage across all your accounts:
+- If your work account is at 80% and personal is at 30%, the tray shows 80%
+- This ensures you're always aware of whichever account is closest to its limit
+
+### Managing Accounts
+
+In Settings > Accounts:
+- **Edit**: Click the pencil icon to update an account's credentials
+- **Delete**: Click the trash icon to remove an account
+- **Test Connection**: Verify credentials are valid before saving
+
+### Notifications
+
+Notifications are shared across all accounts - the same threshold settings apply to each. When a notification is sent, it includes the account name so you know which account triggered it:
+
+> [Work] 5-Hour Limit is at 90% usage
+
+---
+
 ## System Tray
 
 AI Pulse runs in your system tray for quick access to usage information.
@@ -174,14 +220,21 @@ Hover over the tray icon to see a summary of all your usage limits.
 
 Access settings by clicking the gear icon in the dashboard header.
 
-### Credentials
+### Accounts
 
-Configure your Claude API credentials:
+Manage your Claude accounts:
 
+- **Add Account**: Create a new account with credentials
+- **Edit Account**: Update an existing account's name or credentials
+- **Delete Account**: Remove an account from tracking
+- **Test Connection**: Verify credentials work before saving
+
+For each account, you'll need:
+- **Account Name**: A friendly name (e.g., "Work", "Personal")
 - **Organization ID**: Your Claude organization identifier
 - **Session Key**: Your authentication session key
 
-See [Credential Setup](#credential-setup) for detailed instructions.
+See [Credential Setup](#credential-setup) for detailed instructions on obtaining these values.
 
 ### Refresh Interval
 
@@ -221,6 +274,33 @@ Select your preferred appearance:
 ### Launch at Startup
 
 Enable to automatically start AI Pulse when you log in.
+
+---
+
+## Updates
+
+AI Pulse includes automatic update functionality to keep you on the latest version.
+
+### Automatic Update Checks
+
+When a new version is available, AI Pulse will notify you with a system notification. You can then choose to install the update or defer it for later.
+
+### Manual Update Check
+
+To manually check for updates:
+
+1. Click **AI Pulse** in the menu bar (macOS) or right-click the tray icon
+2. Select **About AI Pulse**
+3. Click **Check for Updates**
+
+If an update is available, you'll be prompted to download and install it. The app will restart automatically after the update completes.
+
+### Update Process
+
+1. AI Pulse downloads the update in the background
+2. You're prompted to restart when ready
+3. The update is applied during restart
+4. Your settings and data are preserved
 
 ---
 

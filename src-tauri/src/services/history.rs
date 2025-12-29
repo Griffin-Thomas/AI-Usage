@@ -23,8 +23,15 @@ impl HistoryService {
 
         // Create history entry from usage data
         let entry = UsageHistoryEntry {
-            id: format!("{}-{}", usage_data.timestamp.timestamp(), usage_data.provider),
+            id: format!(
+                "{}-{}-{}",
+                usage_data.timestamp.timestamp(),
+                usage_data.provider,
+                usage_data.account_id
+            ),
             provider: usage_data.provider.clone(),
+            account_id: usage_data.account_id.clone(),
+            account_name: usage_data.account_name.clone(),
             timestamp: usage_data.timestamp,
             limits: usage_data
                 .limits
@@ -86,6 +93,11 @@ impl HistoryService {
         // Filter by provider
         if let Some(ref provider) = query.provider {
             entries.retain(|e| &e.provider == provider);
+        }
+
+        // Filter by account
+        if let Some(ref account_id) = query.account_id {
+            entries.retain(|e| &e.account_id == account_id);
         }
 
         // Filter by date range
@@ -253,6 +265,7 @@ impl HistoryService {
     ) -> Result<Option<UsageStats>, AppError> {
         let query = HistoryQuery {
             provider: Some(provider.to_string()),
+            account_id: None,
             start_date: Some(start),
             end_date: Some(end),
             limit: None,

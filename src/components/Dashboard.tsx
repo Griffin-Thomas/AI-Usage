@@ -7,7 +7,7 @@ import { UsageCard, UsageCardSkeleton } from "@/components/UsageCard";
 import { Analytics } from "@/components/Analytics";
 import { SessionBanner } from "@/components/SessionBanner";
 import { Confetti } from "@/components/Confetti";
-import { useUsageStore, useSettingsStore } from "@/lib/store";
+import { useUsageStore, useAccountsStore } from "@/lib/store";
 import { useUsage } from "@/hooks/useUsage";
 import { formatUsageForClipboard, copyToClipboard } from "@/lib/utils";
 import type { ProviderId } from "@/lib/types";
@@ -35,16 +35,36 @@ export function Dashboard({ provider = "claude", onSettingsClick }: DashboardPro
   const [activeTab, setActiveTab] = useState<TabType>("usage");
   const [copied, setCopied] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
-  const { usage, isLoading, error, lastRefresh } = useUsageStore();
-  const { settings } = useSettingsStore();
-  const { refresh } = useUsage(provider);
-  const compactView = settings?.compactView ?? false;
+  const { usage, isLoading, error, lastRefresh, getAllUsage } = useUsageStore();
+  const { accounts } = useAccountsStore();
+  const { forceRefresh } = useUsage();
+
+  // Get all usage data for display
+  const allUsage = getAllUsage();
+  const hasMultipleAccounts = accounts.length > 1;
+
+  // Check if any account is loading
+  const anyLoading = Object.values(isLoading).some(Boolean);
+
+  // Get the first error for display in the banner
+  const firstError = Object.entries(error).find(([, err]) => err !== null)?.[1] ?? null;
+
+  // Get the most recent last refresh time
+  const mostRecentRefresh = Object.values(lastRefresh)
+    .filter((d): d is Date => d !== null)
+    .sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
 
   const handleCopyUsage = async () => {
-    const currentUsage = usage[provider];
-    if (!currentUsage) return;
+    if (allUsage.length === 0) return;
 
-    const text = formatUsageForClipboard(currentUsage);
+    // Format all usage data
+    const text = allUsage
+      .map((u) => {
+        const prefix = hasMultipleAccounts ? `[${u.accountName}] ` : "";
+        return prefix + formatUsageForClipboard(u);
+      })
+      .join("\n\n");
+
     const success = await copyToClipboard(text);
     if (success) {
       setCopied(true);
@@ -84,10 +104,14 @@ export function Dashboard({ provider = "claude", onSettingsClick }: DashboardPro
     };
   }, []);
 
-  const currentUsage = usage[provider];
-  const currentLoading = isLoading[provider];
-  const currentError = error[provider];
-  const currentLastRefresh = lastRefresh[provider];
+  // Group usage by account for display
+  const groupedUsage = accounts.map((account) => ({
+    account,
+    usage: usage[account.id] ?? null,
+    isLoading: isLoading[account.id] ?? false,
+    error: error[account.id] ?? null,
+    lastRefresh: lastRefresh[account.id] ?? null,
+  }));
 
   return (
     <div className="flex flex-col h-full">
@@ -104,7 +128,7 @@ export function Dashboard({ provider = "claude", onSettingsClick }: DashboardPro
                 variant="ghost"
                 size="icon"
                 onClick={handleCopyUsage}
-                disabled={!currentUsage}
+                disabled={allUsage.length === 0}
                 title="Copy usage to clipboard"
               >
                 {copied ? (
@@ -116,11 +140,11 @@ export function Dashboard({ provider = "claude", onSettingsClick }: DashboardPro
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={refresh}
-                disabled={currentLoading}
+                onClick={forceRefresh}
+                disabled={anyLoading}
                 title="Refresh usage"
               >
-                <RefreshCw className={`h-4 w-4 ${currentLoading ? "animate-spin" : ""}`} />
+                <RefreshCw className={`h-4 w-4 ${anyLoading ? "animate-spin" : ""}`} />
               </Button>
             </>
           )}
@@ -158,38 +182,63 @@ export function Dashboard({ provider = "claude", onSettingsClick }: DashboardPro
 
       {/* Session Banner (shows when there are credential/session issues) */}
       <SessionBanner
-        error={currentError}
+        error={firstError}
         onSettingsClick={onSettingsClick ?? (() => {})}
-        onRefresh={refresh}
+        onRefresh={forceRefresh}
       />
 
       {/* Content */}
       {activeTab === "usage" ? (
         <>
           <main className="flex-1 overflow-auto p-4">
-
-            {currentLoading && !currentUsage && (
+            {/* Loading state when no data yet */}
+            {anyLoading && allUsage.length === 0 && (
               <div className="grid gap-4">
-                <UsageCardSkeleton compact={compactView} />
-                <UsageCardSkeleton compact={compactView} />
+                <UsageCardSkeleton />
+                <UsageCardSkeleton />
               </div>
             )}
 
-            {currentUsage ? (
-              <div className="grid gap-4">
-                {currentUsage.limits.map((limit) => (
-                  <UsageCard
-                    key={limit.id}
-                    limit={limit}
-                    compact={compactView}
-                    onRefresh={refresh}
-                    onOpenProvider={handleOpenProvider}
-                    providerName={PROVIDER_NAMES[provider]}
-                  />
+            {/* Multi-account display */}
+            {groupedUsage.length > 0 ? (
+              <div className="space-y-6">
+                {groupedUsage.map(({ account, usage: accountUsage, isLoading: accountLoading }) => (
+                  <div key={account.id}>
+                    {/* Account header - only show when multiple accounts */}
+                    {hasMultipleAccounts && (
+                      <h2 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-primary" />
+                        {account.name}
+                      </h2>
+                    )}
+
+                    {/* Loading skeleton for this account */}
+                    {accountLoading && !accountUsage && (
+                      <div className="grid gap-4">
+                        <UsageCardSkeleton />
+                        <UsageCardSkeleton />
+                      </div>
+                    )}
+
+                    {/* Usage cards for this account */}
+                    {accountUsage && (
+                      <div className="grid gap-4">
+                        {accountUsage.limits.map((limit) => (
+                          <UsageCard
+                            key={`${account.id}-${limit.id}`}
+                            limit={limit}
+                            onRefresh={forceRefresh}
+                            onOpenProvider={handleOpenProvider}
+                            providerName={PROVIDER_NAMES[provider]}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
             ) : (
-              !currentLoading && (
+              !anyLoading && (
                 <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
                   <p>No usage data available</p>
                   <p className="text-sm">Configure your credentials in Settings</p>
@@ -200,8 +249,8 @@ export function Dashboard({ provider = "claude", onSettingsClick }: DashboardPro
 
           {/* Footer */}
           <footer className="p-2 border-t text-xs text-center text-muted-foreground">
-            {currentLastRefresh ? (
-              <span>Last updated: {currentLastRefresh.toLocaleTimeString()}</span>
+            {mostRecentRefresh ? (
+              <span>Last updated: {mostRecentRefresh.toLocaleTimeString()}</span>
             ) : (
               <span>Not yet refreshed</span>
             )}

@@ -1,9 +1,10 @@
 use crate::error::{AppError, ProviderError};
-use crate::models::UsageData;
+use crate::models::{Account, UsageData};
 use crate::providers::{ClaudeProvider, UsageProvider};
 use crate::services::{
     CredentialService, HistoryService, NotificationService, NotificationState, SettingsService,
 };
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -21,19 +22,19 @@ const SLEEP_DETECTION_THRESHOLD_SECS: u64 = 30;
 pub struct SchedulerState {
     /// Whether the scheduler is currently running
     running: AtomicBool,
-    /// Whether the scheduler is paused due to session issues
-    paused: AtomicBool,
-    /// Count of consecutive session errors
-    session_error_count: AtomicU64,
+    /// Whether the scheduler is paused due to session issues (per account)
+    paused_accounts: AsyncMutex<HashMap<String, bool>>,
+    /// Count of consecutive session errors per account
+    session_error_counts: AsyncMutex<HashMap<String, u64>>,
     /// Last fetch timestamp (unix millis)
     last_fetch: AtomicU64,
     /// Current interval in seconds
     interval_secs: AtomicU64,
     /// Lock for fetch operations to prevent concurrent requests
     fetch_lock: AsyncMutex<()>,
-    /// Previous usage data for detecting resets
-    previous_usage: AsyncMutex<Option<UsageData>>,
-    /// Notification state for tracking sent notifications
+    /// Previous usage data for detecting resets (per account)
+    previous_usage: AsyncMutex<HashMap<String, UsageData>>,
+    /// Notification state for tracking sent notifications (account-aware)
     notification_state: NotificationState,
 }
 
@@ -44,6 +45,7 @@ const MAX_SESSION_ERRORS: u64 = 3;
 #[derive(Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SessionStatusEvent {
+    pub account_id: String,
     pub valid: bool,
     pub error_count: u64,
     pub paused: bool,
@@ -53,12 +55,12 @@ impl Default for SchedulerState {
     fn default() -> Self {
         Self {
             running: AtomicBool::new(false),
-            paused: AtomicBool::new(false),
-            session_error_count: AtomicU64::new(0),
+            paused_accounts: AsyncMutex::new(HashMap::new()),
+            session_error_counts: AsyncMutex::new(HashMap::new()),
             last_fetch: AtomicU64::new(0),
             interval_secs: AtomicU64::new(300), // Default 5 minutes
             fetch_lock: AsyncMutex::new(()),
-            previous_usage: AsyncMutex::new(None),
+            previous_usage: AsyncMutex::new(HashMap::new()),
             notification_state: NotificationState::new(),
         }
     }
@@ -77,24 +79,50 @@ impl SchedulerState {
         self.running.store(running, Ordering::SeqCst);
     }
 
-    pub fn is_paused(&self) -> bool {
-        self.paused.load(Ordering::SeqCst)
+    /// Check if an account is paused
+    pub async fn is_account_paused(&self, account_id: &str) -> bool {
+        let paused = self.paused_accounts.lock().await;
+        paused.get(account_id).copied().unwrap_or(false)
     }
 
-    pub fn set_paused(&self, paused: bool) {
-        self.paused.store(paused, Ordering::SeqCst);
+    /// Set pause status for an account
+    pub async fn set_account_paused(&self, account_id: &str, paused: bool) {
+        let mut map = self.paused_accounts.lock().await;
+        map.insert(account_id.to_string(), paused);
     }
 
-    pub fn get_session_error_count(&self) -> u64 {
-        self.session_error_count.load(Ordering::SeqCst)
+    /// Check if any account is paused
+    pub async fn any_account_paused(&self) -> bool {
+        let paused = self.paused_accounts.lock().await;
+        paused.values().any(|&p| p)
     }
 
-    pub fn increment_session_error_count(&self) -> u64 {
-        self.session_error_count.fetch_add(1, Ordering::SeqCst) + 1
+    /// Get session error count for an account
+    pub async fn get_account_error_count(&self, account_id: &str) -> u64 {
+        let counts = self.session_error_counts.lock().await;
+        counts.get(account_id).copied().unwrap_or(0)
     }
 
-    pub fn reset_session_error_count(&self) {
-        self.session_error_count.store(0, Ordering::SeqCst);
+    /// Increment and return session error count for an account
+    pub async fn increment_account_error_count(&self, account_id: &str) -> u64 {
+        let mut counts = self.session_error_counts.lock().await;
+        let count = counts.entry(account_id.to_string()).or_insert(0);
+        *count += 1;
+        *count
+    }
+
+    /// Reset session error count for an account
+    pub async fn reset_account_error_count(&self, account_id: &str) {
+        let mut counts = self.session_error_counts.lock().await;
+        counts.insert(account_id.to_string(), 0);
+    }
+
+    /// Clear all account paused states and error counts
+    pub async fn reset_all_account_states(&self) {
+        let mut paused = self.paused_accounts.lock().await;
+        paused.clear();
+        let mut counts = self.session_error_counts.lock().await;
+        counts.clear();
     }
 
     pub fn get_interval(&self) -> u64 {
@@ -126,6 +154,18 @@ impl SchedulerState {
         let elapsed_secs = (now - last) / 1000;
         elapsed_secs >= MIN_REFRESH_INTERVAL_SECS
     }
+
+    /// Get previous usage for an account
+    pub async fn get_previous_usage(&self, account_id: &str) -> Option<UsageData> {
+        let previous = self.previous_usage.lock().await;
+        previous.get(account_id).cloned()
+    }
+
+    /// Set previous usage for an account
+    pub async fn set_previous_usage(&self, account_id: &str, data: UsageData) {
+        let mut previous = self.previous_usage.lock().await;
+        previous.insert(account_id.to_string(), data);
+    }
 }
 
 /// Event payload for usage updates
@@ -133,6 +173,7 @@ impl SchedulerState {
 #[serde(rename_all = "camelCase")]
 pub struct UsageUpdateEvent {
     pub provider: String,
+    pub account_id: String,
     pub data: Option<UsageData>,
     pub error: Option<String>,
 }
@@ -254,14 +295,14 @@ impl SchedulerService {
                     tick_elapsed
                 );
                 // System just woke up - refresh immediately (even if paused, to check if session is valid again)
-                Self::fetch_and_emit(&app, &state).await;
+                Self::fetch_all_accounts(&app, &state).await;
                 last_check = Instant::now();
 
                 // Emit wake event to frontend
                 let _ = app.emit("system-wake", ());
-            } else if elapsed >= interval && !state.is_paused() {
-                // Normal scheduled fetch (skip if paused due to session issues)
-                Self::fetch_and_emit(&app, &state).await;
+            } else if elapsed >= interval {
+                // Normal scheduled fetch
+                Self::fetch_all_accounts(&app, &state).await;
                 last_check = Instant::now();
             }
 
@@ -274,8 +315,8 @@ impl SchedulerService {
         log::info!("Scheduler loop ended");
     }
 
-    /// Fetch usage data and emit to frontend
-    async fn fetch_and_emit(app: &AppHandle, state: &SchedulerState) {
+    /// Fetch usage for all accounts and emit events
+    async fn fetch_all_accounts(app: &AppHandle, state: &SchedulerState) {
         // Try to acquire the fetch lock (non-blocking)
         let _lock = match state.fetch_lock.try_lock() {
             Ok(lock) => lock,
@@ -297,8 +338,6 @@ impl SchedulerService {
             return;
         }
 
-        log::info!("Scheduler fetching usage data");
-
         // Update last fetch time
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -306,21 +345,85 @@ impl SchedulerService {
             .as_millis() as u64;
         state.set_last_fetch(now);
 
-        // Fetch for Claude provider (main provider for now)
-        let result = Self::fetch_provider_usage(app, "claude").await;
+        // Get all Claude accounts
+        let accounts = match CredentialService::list_accounts(app, "claude") {
+            Ok(accounts) => accounts,
+            Err(e) => {
+                log::error!("Failed to list accounts: {}", e);
+                return;
+            }
+        };
 
+        if accounts.is_empty() {
+            log::debug!("No accounts configured, skipping fetch");
+            return;
+        }
+
+        log::info!("Scheduler fetching usage for {} account(s)", accounts.len());
+
+        // Track max utilization across all accounts for adaptive refresh
+        let mut max_utilization_overall: f64 = 0.0;
+
+        // Fetch for each account sequentially (to respect rate limits)
+        for account in accounts {
+            // Skip paused accounts
+            if state.is_account_paused(&account.id).await {
+                log::debug!("Skipping paused account: {}", account.name);
+                continue;
+            }
+
+            let result = Self::fetch_account_usage(&account).await;
+            Self::process_account_result(app, state, &account, result, &mut max_utilization_overall).await;
+        }
+
+        // Adaptive refresh based on max utilization across all accounts
+        Self::maybe_adjust_interval_from_utilization(app, state, max_utilization_overall);
+    }
+
+    /// Fetch usage for a single account
+    async fn fetch_account_usage(account: &Account) -> Result<UsageData, AppError> {
+        let claude = ClaudeProvider::new()?;
+
+        if !claude.validate_credentials(&account.credentials) {
+            return Err(ProviderError::InvalidCredentials(
+                format!("Missing org_id or session_key for account {}", account.name),
+            )
+            .into());
+        }
+
+        let mut usage = claude.fetch_usage(&account.credentials).await?;
+
+        // Set account info on the usage data
+        usage.account_id = account.id.clone();
+        usage.account_name = account.name.clone();
+
+        Ok(usage)
+    }
+
+    /// Process the result of fetching usage for an account
+    async fn process_account_result(
+        app: &AppHandle,
+        state: &SchedulerState,
+        account: &Account,
+        result: Result<UsageData, AppError>,
+        max_utilization: &mut f64,
+    ) {
         let event = match result {
             Ok(data) => {
                 // Session is valid - reset error count and unpause if needed
-                if state.get_session_error_count() > 0 || state.is_paused() {
-                    log::info!("Session restored, resuming scheduler");
-                    state.reset_session_error_count();
-                    state.set_paused(false);
+                let error_count = state.get_account_error_count(&account.id).await;
+                let was_paused = state.is_account_paused(&account.id).await;
+
+                if error_count > 0 || was_paused {
+                    log::info!("Session restored for account {}, resuming", account.name);
+                    state.reset_account_error_count(&account.id).await;
+                    state.set_account_paused(&account.id, false).await;
 
                     // Emit session status to frontend
                     let _ = app.emit(
                         "session-status",
                         SessionStatusEvent {
+                            account_id: account.id.clone(),
                             valid: true,
                             error_count: 0,
                             paused: false,
@@ -328,14 +431,15 @@ impl SchedulerService {
                     );
                 }
 
-                // Adaptive refresh: adjust interval based on usage level
-                Self::maybe_adjust_interval(app, state, &data);
+                // Track max utilization for adaptive refresh
+                for limit in &data.limits {
+                    if limit.utilization > *max_utilization {
+                        *max_utilization = limit.utilization;
+                    }
+                }
 
-                // Process notifications (get previous usage first)
-                let previous_data = {
-                    let previous = state.previous_usage.lock().await;
-                    previous.clone()
-                };
+                // Process notifications
+                let previous_data = state.get_previous_usage(&account.id).await;
 
                 NotificationService::process_usage(
                     app,
@@ -349,6 +453,8 @@ impl SchedulerService {
                     NotificationService::check_upcoming_reset(
                         app,
                         &state.notification_state,
+                        &account.id,
+                        &account.name,
                         limit,
                     );
                 }
@@ -359,19 +465,17 @@ impl SchedulerService {
                 }
 
                 // Store current usage as previous for next comparison
-                {
-                    let mut previous = state.previous_usage.lock().await;
-                    *previous = Some(data.clone());
-                }
+                state.set_previous_usage(&account.id, data.clone()).await;
 
                 UsageUpdateEvent {
                     provider: "claude".to_string(),
+                    account_id: account.id.clone(),
                     data: Some(data),
                     error: None,
                 }
             }
             Err(e) => {
-                log::error!("Failed to fetch usage: {}", e);
+                log::error!("Failed to fetch usage for account {}: {}", account.name, e);
 
                 // Check if this is a session expiry error
                 let error_str = e.to_string();
@@ -382,27 +486,30 @@ impl SchedulerService {
                 if is_session_error {
                     NotificationService::send_session_expiry_warning(app);
 
-                    // Track consecutive session errors
-                    let error_count = state.increment_session_error_count();
+                    // Track consecutive session errors per account
+                    let error_count = state.increment_account_error_count(&account.id).await;
                     log::warn!(
-                        "Session error {}/{} - {}",
+                        "Session error {}/{} for account {} - {}",
                         error_count,
                         MAX_SESSION_ERRORS,
+                        account.name,
                         error_str
                     );
 
-                    // Pause scheduler after too many consecutive errors
+                    // Pause this account after too many consecutive errors
                     if error_count >= MAX_SESSION_ERRORS {
                         log::warn!(
-                            "Too many session errors ({}), pausing scheduler",
-                            error_count
+                            "Too many session errors ({}) for account {}, pausing",
+                            error_count,
+                            account.name
                         );
-                        state.set_paused(true);
+                        state.set_account_paused(&account.id, true).await;
 
                         // Emit session status to frontend
                         let _ = app.emit(
                             "session-status",
                             SessionStatusEvent {
+                                account_id: account.id.clone(),
                                 valid: false,
                                 error_count,
                                 paused: true,
@@ -413,6 +520,7 @@ impl SchedulerService {
                         let _ = app.emit(
                             "session-status",
                             SessionStatusEvent {
+                                account_id: account.id.clone(),
                                 valid: false,
                                 error_count,
                                 paused: false,
@@ -423,6 +531,7 @@ impl SchedulerService {
 
                 UsageUpdateEvent {
                     provider: "claude".to_string(),
+                    account_id: account.id.clone(),
                     data: None,
                     error: Some(error_str),
                 }
@@ -433,30 +542,8 @@ impl SchedulerService {
         let _ = app.emit("usage-update", event);
     }
 
-    /// Fetch usage for a specific provider
-    async fn fetch_provider_usage(app: &AppHandle, provider: &str) -> Result<UsageData, AppError> {
-        let credentials = CredentialService::get(app, provider)?
-            .ok_or_else(|| ProviderError::MissingCredentials(provider.to_string()))?;
-
-        match provider {
-            "claude" => {
-                let claude = ClaudeProvider::new()?;
-
-                if !claude.validate_credentials(&credentials) {
-                    return Err(ProviderError::InvalidCredentials(
-                        "Missing org_id or session_key".to_string(),
-                    )
-                    .into());
-                }
-
-                claude.fetch_usage(&credentials).await.map_err(|e| e.into())
-            }
-            _ => Err(ProviderError::HttpError(format!("Unknown provider: {}", provider)).into()),
-        }
-    }
-
-    /// Adjust interval based on usage level (adaptive refresh)
-    fn maybe_adjust_interval(app: &AppHandle, state: &SchedulerState, data: &UsageData) {
+    /// Adjust interval based on max utilization (adaptive refresh)
+    fn maybe_adjust_interval_from_utilization(app: &AppHandle, state: &SchedulerState, max_utilization: f64) {
         // Get settings to check if adaptive mode is enabled
         let settings = match SettingsService::get(app) {
             Ok(s) => s,
@@ -467,32 +554,21 @@ impl SchedulerService {
             return;
         }
 
-        // Find the highest utilization (already a percentage 0-100 from API)
-        let max_utilization = data
-            .limits
-            .iter()
-            .map(|l| l.utilization)
-            .fold(0.0_f64, |a, b| a.max(b));
-
         // Determine new interval based on usage level (utilization is 0-100)
         let new_interval = if max_utilization >= 90.0 {
-            // Very high usage: check every minute
-            60
+            60  // Very high usage: check every minute
         } else if max_utilization >= 75.0 {
-            // High usage: check every 3 minutes
-            180
+            180 // High usage: check every 3 minutes
         } else if max_utilization >= 50.0 {
-            // Medium usage: check every 5 minutes
-            300
+            300 // Medium usage: check every 5 minutes
         } else {
-            // Low usage: check every 10 minutes
-            600
+            600 // Low usage: check every 10 minutes
         };
 
         let current_interval = state.get_interval();
         if new_interval != current_interval {
             log::info!(
-                "Adaptive refresh: adjusting interval from {}s to {}s (usage: {:.0}%)",
+                "Adaptive refresh: adjusting interval from {}s to {}s (max usage: {:.0}%)",
                 current_interval,
                 new_interval,
                 max_utilization
@@ -509,5 +585,10 @@ impl SchedulerService {
                 },
             );
         }
+    }
+
+    // Legacy function kept for backward compatibility with force_refresh
+    async fn fetch_and_emit(app: &AppHandle, state: &SchedulerState) {
+        Self::fetch_all_accounts(app, state).await;
     }
 }

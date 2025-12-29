@@ -195,18 +195,34 @@ Deferred until Google provides a simpler usage API or community demand justifies
 - [x] Add smooth animations to progress rings
 - [x] Implement skeleton loading states
 - [x] Add confetti animation when usage resets
-- [x] Add compact/minimal view mode (smaller window)
 
 ---
 
 ## Phase 7: Power User Features
 
-### 7.1 Multi-Account Support
-- [ ] Allow multiple Claude accounts (work, personal, etc.)
-- [ ] Add account switcher in settings
-- [ ] Display usage for all accounts in dashboard
-- [ ] Per-account notification preferences
-- [ ] Show aggregated usage view across accounts
+### 7.1 Multi-Account Support (100% Complete)
+
+#### Backend (Completed)
+- [x] Add `Account` model with id, name, provider, credentials, createdAt
+- [x] Update `UsageData` and `UsageHistoryEntry` with account fields
+- [x] Refactor credential storage for account-based format with v1→v2 migration
+- [x] Create account CRUD commands (list_accounts, save_account, delete_account, etc.)
+- [x] Update scheduler to fetch all accounts and emit per-account events
+- [x] Update notifications for account-aware deduplication (keys include account_id)
+
+#### Frontend (Completed)
+- [x] Add Tauri bindings for account commands in `src/lib/tauri.ts`
+- [x] Update stores for multi-account usage tracking (accountId-keyed)
+- [x] Add AccountManager component to Settings (list, add, edit, delete accounts)
+- [x] Update Dashboard for grouped display (headers when 2+ accounts)
+- [x] Update useUsage hook for per-account events
+
+#### Original Requirements
+- [x] Allow multiple Claude accounts (work, personal, etc.)
+- [x] Show all accounts in dashboard (no switcher needed)
+- [x] Display usage for all accounts in dashboard
+- [x] Per-account notification preferences - Shared settings (simpler)
+- [x] Show aggregated usage view across accounts - Tray shows worst-case
 
 ### 7.2 Data & Export Enhancements
 - [ ] Add scheduled automatic exports (daily/weekly backup)

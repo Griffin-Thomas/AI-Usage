@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { invoke } from '@tauri-apps/api/core'
 import {
   fetchUsage,
+  fetchUsageForAccount,
   validateCredentials,
   getCredentials,
   saveCredentials,
@@ -23,9 +24,14 @@ import {
   exportHistoryJson,
   exportHistoryCsv,
   clearHistory,
+  listAccounts,
+  getAccount,
+  saveAccount,
+  deleteAccount,
+  testAccountConnection,
 } from './tauri'
-import type { UsageData, UsageHistoryEntry, HistoryMetadata, RetentionPolicy, UsageStats } from './types'
-import type { AppSettings, Credentials, SchedulerStatus } from './tauri'
+import type { UsageData, UsageHistoryEntry, HistoryMetadata, RetentionPolicy, UsageStats, Account, Credentials } from './types'
+import type { AppSettings, SchedulerStatus, TestConnectionResult } from './tauri'
 
 // Mock Tauri invoke
 vi.mock('@tauri-apps/api/core', () => ({
@@ -47,6 +53,8 @@ describe('Tauri API Integration', () => {
     it('calls invoke with correct command and provider', async () => {
       const mockUsageData: UsageData = {
         provider: 'claude',
+        accountId: 'default',
+        accountName: 'Default',
         timestamp: '2025-01-15T12:00:00Z',
         limits: [
           {
@@ -69,6 +77,150 @@ describe('Tauri API Integration', () => {
       mockInvoke.mockRejectedValue(new Error('Session expired'))
 
       await expect(fetchUsage('claude')).rejects.toThrow('Session expired')
+    })
+  })
+
+  describe('fetchUsageForAccount', () => {
+    it('calls invoke with correct command and accountId', async () => {
+      const mockUsageData: UsageData = {
+        provider: 'claude',
+        accountId: 'account-123',
+        accountName: 'Personal',
+        timestamp: '2025-01-15T12:00:00Z',
+        limits: [],
+      }
+      mockInvoke.mockResolvedValue(mockUsageData)
+
+      const result = await fetchUsageForAccount('account-123')
+
+      expect(mockInvoke).toHaveBeenCalledWith('fetch_usage_for_account', { accountId: 'account-123' })
+      expect(result).toEqual(mockUsageData)
+    })
+  })
+
+  // ============================================================================
+  // Account Commands
+  // ============================================================================
+
+  describe('listAccounts', () => {
+    it('returns list of accounts for provider', async () => {
+      const mockAccounts: Account[] = [
+        { id: '1', name: 'Personal', provider: 'claude', credentials: { org_id: 'org1' }, createdAt: '2025-01-01' },
+        { id: '2', name: 'Work', provider: 'claude', credentials: { org_id: 'org2' }, createdAt: '2025-01-02' },
+      ]
+      mockInvoke.mockResolvedValue(mockAccounts)
+
+      const result = await listAccounts('claude')
+
+      expect(mockInvoke).toHaveBeenCalledWith('list_accounts', { provider: 'claude' })
+      expect(result).toEqual(mockAccounts)
+    })
+
+    it('returns empty array when no accounts', async () => {
+      mockInvoke.mockResolvedValue([])
+
+      const result = await listAccounts('claude')
+
+      expect(result).toEqual([])
+    })
+  })
+
+  describe('getAccount', () => {
+    it('returns account when it exists', async () => {
+      const mockAccount: Account = {
+        id: '1',
+        name: 'Personal',
+        provider: 'claude',
+        credentials: { org_id: 'org1' },
+        createdAt: '2025-01-01',
+      }
+      mockInvoke.mockResolvedValue(mockAccount)
+
+      const result = await getAccount('1')
+
+      expect(mockInvoke).toHaveBeenCalledWith('get_account', { accountId: '1' })
+      expect(result).toEqual(mockAccount)
+    })
+
+    it('returns null when account does not exist', async () => {
+      mockInvoke.mockResolvedValue(null)
+
+      const result = await getAccount('nonexistent')
+
+      expect(result).toBeNull()
+    })
+  })
+
+  describe('saveAccount', () => {
+    it('saves account successfully', async () => {
+      mockInvoke.mockResolvedValue(undefined)
+      const account: Account = {
+        id: '1',
+        name: 'Personal',
+        provider: 'claude',
+        credentials: { org_id: 'org1', session_key: 'sk-test' },
+        createdAt: '2025-01-01',
+      }
+
+      await saveAccount(account)
+
+      expect(mockInvoke).toHaveBeenCalledWith('save_account', { account })
+    })
+  })
+
+  describe('deleteAccount', () => {
+    it('deletes account successfully', async () => {
+      mockInvoke.mockResolvedValue(undefined)
+
+      await deleteAccount('account-123')
+
+      expect(mockInvoke).toHaveBeenCalledWith('delete_account', { accountId: 'account-123' })
+    })
+  })
+
+  describe('testAccountConnection', () => {
+    it('returns success result for valid account', async () => {
+      const mockResult: TestConnectionResult = {
+        success: true,
+        error_code: null,
+        error_message: null,
+        hint: null,
+      }
+      mockInvoke.mockResolvedValue(mockResult)
+      const account: Account = {
+        id: '1',
+        name: 'Personal',
+        provider: 'claude',
+        credentials: { org_id: 'org1', session_key: 'sk-test' },
+        createdAt: '2025-01-01',
+      }
+
+      const result = await testAccountConnection(account)
+
+      expect(mockInvoke).toHaveBeenCalledWith('test_account_connection', { account })
+      expect(result.success).toBe(true)
+    })
+
+    it('returns error result for invalid account', async () => {
+      const mockResult: TestConnectionResult = {
+        success: false,
+        error_code: 'SESSION_EXPIRED',
+        error_message: 'Your session has expired',
+        hint: 'Please get a fresh session key from Claude.ai',
+      }
+      mockInvoke.mockResolvedValue(mockResult)
+      const account: Account = {
+        id: '1',
+        name: 'Personal',
+        provider: 'claude',
+        credentials: { org_id: 'org1', session_key: 'expired-key' },
+        createdAt: '2025-01-01',
+      }
+
+      const result = await testAccountConnection(account)
+
+      expect(result.success).toBe(false)
+      expect(result.error_code).toBe('SESSION_EXPIRED')
     })
   })
 
@@ -189,7 +341,6 @@ describe('Tauri API Integration', () => {
         refreshInterval: 300,
         trayDisplayLimit: 'highest',
         globalShortcut: null,
-        compactView: false,
         notifications: {
           enabled: true,
           thresholds: [50, 75, 90],
@@ -225,7 +376,6 @@ describe('Tauri API Integration', () => {
         refreshInterval: 60,
         trayDisplayLimit: 'five_hour',
         globalShortcut: 'CommandOrControl+Shift+A',
-        compactView: true,
         notifications: {
           enabled: true,
           thresholds: [50, 75, 90],
@@ -312,8 +462,10 @@ describe('Tauri API Integration', () => {
     it('returns history entries', async () => {
       const mockEntries: UsageHistoryEntry[] = [
         {
-          id: '2025-01-15T12:00:00Z-claude',
+          id: '2025-01-15T12:00:00Z-claude-default',
           provider: 'claude',
+          accountId: 'default',
+          accountName: 'Default',
           timestamp: '2025-01-15T12:00:00Z',
           limits: [{ id: 'five_hour', utilization: 0.45, resetsAt: '2025-01-15T17:00:00Z' }],
         },

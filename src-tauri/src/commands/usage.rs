@@ -11,7 +11,7 @@ pub fn list_providers() -> Result<Vec<ProviderMetadata>, AppError> {
     Ok(registry.all_metadata())
 }
 
-/// Fetch usage data for a specific provider
+/// Fetch usage data for a specific provider (legacy - returns first account)
 #[tauri::command]
 pub async fn fetch_usage(app: AppHandle, provider: String) -> Result<UsageData, AppError> {
     log::info!("Fetching usage for provider: {}", provider);
@@ -22,12 +22,15 @@ pub async fn fetch_usage(app: AppHandle, provider: String) -> Result<UsageData, 
         .get(&provider)
         .ok_or_else(|| ProviderError::HttpError(format!("Unknown or unavailable provider: {}", provider)))?;
 
-    // Get credentials
-    let credentials = CredentialService::get(&app, &provider)?
+    // Get first account for this provider
+    let accounts = CredentialService::list_accounts(&app, &provider)?;
+    let account = accounts
+        .into_iter()
+        .next()
         .ok_or_else(|| ProviderError::MissingCredentials(provider.clone()))?;
 
     // Validate credentials
-    if !provider_impl.validate_credentials(&credentials) {
+    if !provider_impl.validate_credentials(&account.credentials) {
         return Err(ProviderError::InvalidCredentials(
             format!("Invalid credentials for {}", provider),
         )
@@ -35,7 +38,45 @@ pub async fn fetch_usage(app: AppHandle, provider: String) -> Result<UsageData, 
     }
 
     // Fetch usage
-    let usage = provider_impl.fetch_usage(&credentials).await?;
+    let mut usage = provider_impl.fetch_usage(&account.credentials).await?;
+
+    // Add account info to usage data
+    usage.account_id = account.id;
+    usage.account_name = account.name;
+
+    Ok(usage)
+}
+
+/// Fetch usage data for a specific account
+#[tauri::command]
+pub async fn fetch_usage_for_account(app: AppHandle, account_id: String) -> Result<UsageData, AppError> {
+    log::info!("Fetching usage for account: {}", account_id);
+
+    // Get the account
+    let account = CredentialService::get_account(&app, &account_id)?
+        .ok_or_else(|| ProviderError::MissingCredentials(format!("Account not found: {}", account_id)))?;
+
+    // Get the provider from registry
+    let registry = ProviderRegistry::new()?;
+    let provider_impl = registry
+        .get(&account.provider)
+        .ok_or_else(|| ProviderError::HttpError(format!("Unknown or unavailable provider: {}", account.provider)))?;
+
+    // Validate credentials
+    if !provider_impl.validate_credentials(&account.credentials) {
+        return Err(ProviderError::InvalidCredentials(
+            format!("Invalid credentials for account {}", account.name),
+        )
+        .into());
+    }
+
+    // Fetch usage
+    let mut usage = provider_impl.fetch_usage(&account.credentials).await?;
+
+    // Add account info to usage data
+    usage.account_id = account.id;
+    usage.account_name = account.name;
+
     Ok(usage)
 }
 

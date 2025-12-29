@@ -8,18 +8,20 @@ import type {
   HistoryQuery,
   RetentionPolicy,
   UsageStats,
+  Account,
+  Credentials,
 } from "./types";
 
-// Credentials type matching Rust
-export interface Credentials {
-  org_id?: string;
-  session_key?: string;
-  api_key?: string;
-}
+// Re-export for backward compatibility
+export type { Credentials };
 
 // Usage commands
 export async function fetchUsage(provider: ProviderId): Promise<UsageData> {
   return invoke<UsageData>("fetch_usage", { provider });
+}
+
+export async function fetchUsageForAccount(accountId: string): Promise<UsageData> {
+  return invoke<UsageData>("fetch_usage_for_account", { accountId });
 }
 
 export async function validateCredentials(
@@ -46,6 +48,32 @@ export async function testConnection(
 
 export async function listProviders(): Promise<ProviderMetadata[]> {
   return invoke<ProviderMetadata[]>("list_providers");
+}
+
+// ============================================================================
+// Account commands (Multi-Account Support)
+// ============================================================================
+
+export async function listAccounts(provider: ProviderId): Promise<Account[]> {
+  return invoke<Account[]>("list_accounts", { provider });
+}
+
+export async function getAccount(accountId: string): Promise<Account | null> {
+  return invoke<Account | null>("get_account", { accountId });
+}
+
+export async function saveAccount(account: Account): Promise<void> {
+  return invoke("save_account", { account });
+}
+
+export async function deleteAccount(accountId: string): Promise<void> {
+  return invoke("delete_account", { accountId });
+}
+
+export async function testAccountConnection(
+  account: Account
+): Promise<TestConnectionResult> {
+  return invoke<TestConnectionResult>("test_account_connection", { account });
 }
 
 // Credential commands
@@ -133,7 +161,6 @@ export interface AppSettings {
   refreshInterval: 60 | 180 | 300 | 600;
   trayDisplayLimit: TrayDisplayLimit;
   globalShortcut: string | null;
-  compactView: boolean;
   notifications: NotificationSettings;
   providers: ProviderConfig[];
 }

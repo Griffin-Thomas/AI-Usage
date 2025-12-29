@@ -9,7 +9,6 @@ import { Clock, Copy, Check, RefreshCw, ExternalLink } from "lucide-react";
 
 interface UsageCardProps {
   limit: UsageLimit;
-  compact?: boolean;
   onRefresh?: () => void;
   onOpenProvider?: () => void;
   providerName?: string;
@@ -17,7 +16,6 @@ interface UsageCardProps {
 
 export function UsageCard({
   limit,
-  compact = false,
   onRefresh,
   onOpenProvider,
   providerName,
@@ -61,28 +59,6 @@ export function UsageCard({
       : []),
   ];
 
-  if (compact) {
-    return (
-      <ContextMenu items={contextMenuItems}>
-        <Card className="p-3">
-          <div className="flex items-center gap-3">
-            <ProgressRing value={limit.utilization} size={48} strokeWidth={4} />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{limit.label}</p>
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Clock className="h-3 w-3" />
-                <span>{resetTime}</span>
-              </div>
-            </div>
-            <div className="text-lg font-semibold tabular-nums">
-              {Math.round(limit.utilization)}%
-            </div>
-          </div>
-        </Card>
-      </ContextMenu>
-    );
-  }
-
   return (
     <ContextMenu items={contextMenuItems}>
       <Card className="group relative">
@@ -112,26 +88,7 @@ export function UsageCard({
   );
 }
 
-interface UsageCardSkeletonProps {
-  compact?: boolean;
-}
-
-export function UsageCardSkeleton({ compact = false }: UsageCardSkeletonProps) {
-  if (compact) {
-    return (
-      <Card className="p-3">
-        <div className="flex items-center gap-3">
-          <Skeleton className="h-12 w-12 rounded-full" />
-          <div className="flex-1 min-w-0 space-y-2">
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-3 w-16" />
-          </div>
-          <Skeleton className="h-6 w-10" />
-        </div>
-      </Card>
-    );
-  }
-
+export function UsageCardSkeleton() {
   return (
     <Card>
       <CardHeader className="pb-2">

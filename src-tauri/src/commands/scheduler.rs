@@ -56,23 +56,23 @@ pub async fn resume_scheduler(
     app: AppHandle,
     state: State<'_, Arc<SchedulerState>>,
 ) -> Result<(), AppError> {
-    // Clear session errors and unpause
-    state.reset_session_error_count();
-    state.set_paused(false);
-    log::info!("Scheduler resumed by user");
+    // Clear session errors and unpause all accounts
+    state.reset_all_account_states().await;
+    log::info!("Scheduler resumed by user - all accounts unpaused");
 
     // Force a refresh to verify the new credentials work
     SchedulerService::force_refresh(&app, &state).await
 }
 
-/// Get the current session status
+/// Get the current session status (aggregate across all accounts)
 #[tauri::command]
-pub fn get_session_status(state: State<'_, Arc<SchedulerState>>) -> SessionStatusResponse {
-    SessionStatusResponse {
-        valid: state.get_session_error_count() == 0 && !state.is_paused(),
-        error_count: state.get_session_error_count(),
-        paused: state.is_paused(),
-    }
+pub async fn get_session_status(state: State<'_, Arc<SchedulerState>>) -> Result<SessionStatusResponse, AppError> {
+    let any_paused = state.any_account_paused().await;
+    Ok(SessionStatusResponse {
+        valid: !any_paused,
+        error_count: 0, // Legacy field, no longer tracked globally
+        paused: any_paused,
+    })
 }
 
 #[derive(serde::Serialize)]

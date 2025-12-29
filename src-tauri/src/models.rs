@@ -42,11 +42,46 @@ pub struct Credentials {
     pub api_key: Option<String>,
 }
 
+/// Account for multi-account support
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Account {
+    /// Unique account identifier (UUID)
+    pub id: String,
+    /// User-defined account name (e.g., "Personal", "Work")
+    pub name: String,
+    /// Provider this account belongs to (e.g., "claude")
+    pub provider: String,
+    /// Credentials for this account
+    pub credentials: Credentials,
+    /// When the account was created
+    pub created_at: DateTime<Utc>,
+}
+
+impl Account {
+    /// Create a new account with a generated UUID
+    pub fn new(name: String, provider: String, credentials: Credentials) -> Self {
+        Self {
+            id: uuid::Uuid::new_v4().to_string(),
+            name,
+            provider,
+            credentials,
+            created_at: Utc::now(),
+        }
+    }
+}
+
 /// Usage data returned to frontend
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UsageData {
     pub provider: String,
+    /// Account ID for multi-account support
+    #[serde(default)]
+    pub account_id: String,
+    /// Account name for display (e.g., "Personal", "Work")
+    #[serde(default)]
+    pub account_name: String,
     pub timestamp: DateTime<Utc>,
     pub limits: Vec<UsageLimit>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -100,9 +135,6 @@ pub struct AppSettings {
     /// Global keyboard shortcut to show/hide the window (e.g., "CommandOrControl+Shift+A")
     #[serde(default)]
     pub global_shortcut: Option<String>,
-    /// Whether to show compact view mode (smaller cards)
-    #[serde(default)]
-    pub compact_view: bool,
     pub notifications: NotificationSettings,
     pub providers: Vec<ProviderConfig>,
 }
@@ -145,10 +177,16 @@ pub struct ProviderConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UsageHistoryEntry {
-    /// Unique identifier (timestamp-provider format)
+    /// Unique identifier (timestamp-provider-account format)
     pub id: String,
     /// Provider ID (claude, codex, gemini)
     pub provider: String,
+    /// Account ID for multi-account support
+    #[serde(default)]
+    pub account_id: String,
+    /// Account name for display
+    #[serde(default)]
+    pub account_name: String,
     /// When this snapshot was taken
     pub timestamp: DateTime<Utc>,
     /// Usage limits at this point in time
@@ -186,6 +224,8 @@ pub struct HistoryMetadata {
 pub struct HistoryQuery {
     /// Filter by provider (optional)
     pub provider: Option<String>,
+    /// Filter by account ID (optional)
+    pub account_id: Option<String>,
     /// Start of date range (optional)
     pub start_date: Option<DateTime<Utc>>,
     /// End of date range (optional)
@@ -239,7 +279,6 @@ impl Default for AppSettings {
             refresh_interval: 300,
             tray_display_limit: "highest".to_string(),
             global_shortcut: None,
-            compact_view: false,
             notifications: NotificationSettings {
                 enabled: true,
                 thresholds: vec![50, 75, 90],
