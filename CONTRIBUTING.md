@@ -118,12 +118,15 @@ AI-Pulse/
 |------|---------|
 | `src/App.tsx` | Main React application |
 | `src/components/Dashboard.tsx` | Usage dashboard UI |
-| `src/components/Analytics.tsx` | Analytics view |
+| `src/components/Analytics.tsx` | Analytics charts and stats |
+| `src/components/AccountManager.tsx` | Multi-account credential management |
+| `src/components/Settings.tsx` | Settings panel |
 | `src/lib/store.ts` | Zustand state stores |
-| `src/lib/tray.ts` | Tray icon generation |
+| `src/lib/tauri.ts` | Tauri command wrappers |
 | `src-tauri/src/lib.rs` | Tauri app setup |
 | `src-tauri/src/providers/claude.rs` | Claude API integration |
 | `src-tauri/src/services/scheduler.rs` | Background refresh |
+| `src-tauri/src/services/credentials.rs` | Account/credential storage |
 
 ---
 
@@ -263,7 +266,13 @@ import { UsageCard } from './UsageCard';
 
 describe('UsageCard', () => {
   it('displays usage percentage', () => {
-    render(<UsageCard usage={75} limit="5-hour" resetTime="2h 30m" />);
+    const limit = {
+      id: 'five_hour',
+      label: '5-Hour Limit',
+      utilization: 75,
+      resetsAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+    };
+    render(<UsageCard limit={limit} />);
     expect(screen.getByText('75%')).toBeInTheDocument();
   });
 });
@@ -320,18 +329,21 @@ To add support for a new AI service (e.g., Gemini):
    ```
    src-tauri/src/providers/mod.rs
    ```
+   Add to the `ProviderRegistry`.
 
-3. **Add credential storage**
+3. **Add account commands**
    ```
-   src-tauri/src/services/credentials.rs
+   src-tauri/src/commands/accounts.rs
    ```
+   Handle account creation/validation for the new provider.
 
-4. **Create UI configuration**
+4. **Update the AccountManager UI**
    ```
-   src/components/ProviderConfig.tsx
+   src/components/AccountManager.tsx
    ```
+   Add provider-specific credential fields if needed.
 
-5. **Update types** in both TypeScript and Rust
+5. **Update types** in both TypeScript (`src/lib/types.ts`) and Rust (`src-tauri/src/models.rs`)
 
 See `docs/api-integration.md` for API endpoint research.
 
