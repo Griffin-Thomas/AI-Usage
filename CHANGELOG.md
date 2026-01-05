@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.1] - 2026-01-04
+
+### Added
+- CLI tests to CI workflow (`test-cli` job)
+- CLI binary builds to release workflow (uploads binaries for macOS, Linux, Windows)
+
 ## [0.18.0] - 2026-01-04
 
 ### Added

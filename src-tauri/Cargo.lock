@@ -65,7 +65,7 @@ dependencies = [
 
 [[package]]
 name = "ai-pulse"
-version = "0.17.0"
+version = "0.18.1"
 dependencies = [
  "aes-gcm",
  "async-trait",

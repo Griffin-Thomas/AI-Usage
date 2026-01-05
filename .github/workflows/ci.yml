@@ -47,3 +47,22 @@ jobs:
 
       - name: Run Rust tests (unit + integration with mocked HTTP)
         run: cargo test --manifest-path src-tauri/Cargo.toml -- --nocapture
+
+  test-cli:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: cli
+
+      - name: Run CLI tests
+        run: cargo test --manifest-path cli/Cargo.toml -- --nocapture
+
+      - name: Build CLI
+        run: cargo build --manifest-path cli/Cargo.toml --release
