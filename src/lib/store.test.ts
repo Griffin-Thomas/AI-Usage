@@ -231,6 +231,9 @@ describe('useSettingsStore', () => {
           { id: 'chatgpt', enabled: false, credentials: {} },
           { id: 'gemini', enabled: false, credentials: {} },
         ],
+        apiServerEnabled: false,
+        apiServerPort: 31415,
+        apiServerToken: null,
       },
       isLoading: false,
     })

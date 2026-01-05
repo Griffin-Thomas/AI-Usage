@@ -163,6 +163,10 @@ export interface AppSettings {
   globalShortcut: string | null;
   notifications: NotificationSettings;
   providers: ProviderConfig[];
+  // API Server settings (for CLI and IDE integrations)
+  apiServerEnabled: boolean;
+  apiServerPort: number;
+  apiServerToken: string | null;
 }
 
 export interface NotificationSettings {

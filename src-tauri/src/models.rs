@@ -137,6 +137,19 @@ pub struct AppSettings {
     pub global_shortcut: Option<String>,
     pub notifications: NotificationSettings,
     pub providers: Vec<ProviderConfig>,
+    /// Enable the local API server for CLI and IDE integrations
+    #[serde(default)]
+    pub api_server_enabled: bool,
+    /// Port for the local API server (default: 31415)
+    #[serde(default = "default_api_server_port")]
+    pub api_server_port: u16,
+    /// Optional authentication token for the API server
+    #[serde(default)]
+    pub api_server_token: Option<String>,
+}
+
+fn default_api_server_port() -> u16 {
+    31415
 }
 
 fn default_tray_display_limit() -> String {
@@ -300,6 +313,9 @@ impl Default for AppSettings {
                     credentials: std::collections::HashMap::new(),
                 },
             ],
+            api_server_enabled: false,
+            api_server_port: 31415,
+            api_server_token: None,
         }
     }
 }
@@ -370,6 +386,10 @@ mod tests {
         assert!(settings.notifications.enabled);
         assert_eq!(settings.notifications.thresholds, vec![50, 75, 90]);
         assert_eq!(settings.providers.len(), 2);
+        // API server settings
+        assert!(!settings.api_server_enabled);
+        assert_eq!(settings.api_server_port, 31415);
+        assert!(settings.api_server_token.is_none());
     }
 
     #[test]

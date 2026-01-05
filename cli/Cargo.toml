@@ -1,0 +1,22 @@
+[package]
+name = "ai-pulse-cli"
+version = "0.1.0"
+description = "CLI companion tool for AI Pulse"
+authors = ["Griffin Thomas"]
+license = "MIT"
+edition = "2021"
+readme = "README.md"
+
+[[bin]]
+name = "ai-pulse"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+reqwest = { version = "0.12", features = ["json", "blocking"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+dirs = "5"
+colored = "2"
+chrono = { version = "0.4", features = ["serde"] }

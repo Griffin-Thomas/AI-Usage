@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-01-04
+
+### Added
+- Local API server for CLI and IDE integrations
+  - REST API endpoints: /health, /status, /accounts, /history, /refresh
+  - Runs on configurable port (default: 31415, localhost only)
+  - Optional authentication via Bearer token
+  - Developer settings section in Settings UI
+- CLI companion tool (`ai-pulse`)
+  - `ai-pulse status` - Show current usage for all accounts
+  - `ai-pulse history` - View usage history
+  - `ai-pulse refresh` - Trigger an immediate refresh
+  - `ai-pulse config` - Manage CLI configuration
+  - Coloured output with progress bars and time formatting
+  - JSON output mode for scripting
+
 ## [0.17.0] - 2025-12-29
 
 ### Added

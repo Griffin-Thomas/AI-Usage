@@ -8,6 +8,7 @@ use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_opener::OpenerExt;
 
+mod api;
 mod commands;
 mod error;
 mod models;
@@ -24,7 +25,7 @@ use commands::{
     start_scheduler, stop_scheduler, test_account_connection, test_connection,
     validate_credentials,
 };
-use services::{HistoryService, SchedulerService, SchedulerState};
+use services::{HistoryService, SchedulerService, SchedulerState, SettingsService};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -197,7 +198,7 @@ pub fn run() {
                     .show_menu_on_left_click(false);
             }
 
-            // Windows: Standard tray behavior with tooltip
+            // Windows: Standard tray behaviour with tooltip
             #[cfg(target_os = "windows")]
             {
                 tray_builder = tray_builder
@@ -327,6 +328,35 @@ pub fn run() {
             // Start the background scheduler
             let scheduler_state = app.state::<Arc<SchedulerState>>();
             SchedulerService::start(app.handle().clone(), scheduler_state.inner().clone());
+
+            // Start the API server if enabled
+            match SettingsService::get(app.handle()) {
+                Ok(settings) => {
+                    log::info!(
+                        "API server enabled: {}, port: {}",
+                        settings.api_server_enabled,
+                        settings.api_server_port
+                    );
+                    if settings.api_server_enabled {
+                        let api_state = api::ApiState::new(
+                            app.handle().clone(),
+                            scheduler_state.inner().clone(),
+                        );
+                        api::start_server(
+                            api_state,
+                            settings.api_server_port,
+                            settings.api_server_token.clone(),
+                        );
+                        log::info!(
+                            "API server started on port {}",
+                            settings.api_server_port
+                        );
+                    }
+                }
+                Err(e) => {
+                    log::warn!("Failed to load settings for API server: {}", e);
+                }
+            }
 
             Ok(())
         })

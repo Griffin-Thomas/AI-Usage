@@ -162,6 +162,10 @@ const defaultSettings: AppSettings = {
     { id: "chatgpt", enabled: false, credentials: {} },
     { id: "gemini", enabled: false, credentials: {} },
   ],
+  // API Server settings
+  apiServerEnabled: false,
+  apiServerPort: 31415,
+  apiServerToken: null,
 };
 
 export const useSettingsStore = create<SettingsState>((set) => ({

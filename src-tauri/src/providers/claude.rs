@@ -56,7 +56,7 @@ impl ClaudeProvider {
             HeaderValue::from_static("web_claude_ai"),
         );
 
-        // Sec-Fetch headers (mimic browser behavior)
+        // Sec-Fetch headers (mimic browser behaviour)
         headers.insert("sec-fetch-dest", HeaderValue::from_static("empty"));
         headers.insert("sec-fetch-mode", HeaderValue::from_static("cors"));
         headers.insert("sec-fetch-site", HeaderValue::from_static("same-origin"));

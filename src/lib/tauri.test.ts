@@ -355,6 +355,9 @@ describe('Tauri API Integration', () => {
           { id: 'chatgpt', enabled: false, credentials: {} },
           { id: 'gemini', enabled: false, credentials: {} },
         ],
+        apiServerEnabled: false,
+        apiServerPort: 31415,
+        apiServerToken: null,
       }
       mockInvoke.mockResolvedValue(mockSettings)
 
@@ -386,6 +389,9 @@ describe('Tauri API Integration', () => {
           dndEndTime: "08:00",
         },
         providers: [],
+        apiServerEnabled: false,
+        apiServerPort: 31415,
+        apiServerToken: null,
       }
 
       await saveSettings(settings)

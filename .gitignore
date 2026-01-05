@@ -30,5 +30,8 @@ HANDOFF.md
 RELEASE.md
 .venv/
 
+# CLI build artifacts
+cli/target/
+
 # Tauri signing keys (private key - never commit!)
 .tauri-keys/

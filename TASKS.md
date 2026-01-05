@@ -239,9 +239,9 @@ Deferred until Google provides a simpler usage API or community demand justifies
 - [ ] Generate monthly usage reports (in-app or email)
 
 ### 7.4 Developer Features
-- [ ] Add CLI companion tool (`ai-pulse status`, `ai-pulse history`)
-- [ ] Implement local API server for IDE integrations
-- [ ] Create VS Code extension showing usage in status bar
+- [x] Implement local API server for IDE integrations (Axum-based, localhost:31415)
+- [x] Add CLI companion tool (`ai-pulse status`, `ai-pulse history`, `ai-pulse refresh`)
+- [ ] Create VS Code extension showing usage in status bar (separate repository)
 - [ ] Webhook support to push usage events to external services
 
 ---

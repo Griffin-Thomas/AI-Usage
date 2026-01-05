@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { X, Loader2, Check, AlertTriangle, Clock, Bell } from "lucide-react";
+import { X, Loader2, Check, AlertTriangle, Clock, Bell, Terminal, Copy, Eye, EyeOff } from "lucide-react";
 import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -654,6 +654,12 @@ export function Settings({ isOpen, onClose, onCredentialsSaved }: SettingsProps)
               )}
             </div>
 
+            {/* Developer Settings */}
+            <DeveloperSettings
+              settings={settings}
+              onSettingChange={handleSettingChange}
+            />
+
             {/* Help section */}
             {/* <div className="pt-4 border-t">
               <h3 className="text-sm font-medium mb-2">How to get your credentials</h3>
@@ -667,6 +673,174 @@ export function Settings({ isOpen, onClose, onCredentialsSaved }: SettingsProps)
           </CardContent>
         </Card>
       </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Developer Settings Component
+// ============================================================================
+
+interface DeveloperSettingsProps {
+  settings: AppSettings | null;
+  onSettingChange: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => Promise<void>;
+}
+
+function DeveloperSettings({ settings, onSettingChange }: DeveloperSettingsProps) {
+  const [showToken, setShowToken] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  if (!settings) return null;
+
+  const generateToken = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let token = '';
+    for (let i = 0; i < 32; i++) {
+      token += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    onSettingChange('apiServerToken', token);
+  };
+
+  const copyCliConfig = async () => {
+    const config = `port = ${settings.apiServerPort}
+token = "${settings.apiServerToken || ''}"`;
+    try {
+      await navigator.clipboard.writeText(config);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  return (
+    <div className="pt-4 border-t space-y-4">
+      <div className="flex items-center gap-2">
+        <Terminal className="h-4 w-4 text-muted-foreground" />
+        <h3 className="text-sm font-medium">Developer</h3>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div className="space-y-0.5">
+          <Label htmlFor="api-server-enabled">Enable Local API Server</Label>
+          <p className="text-xs text-muted-foreground">
+            Allow CLI and IDE integrations to access usage data
+          </p>
+        </div>
+        <button
+          id="api-server-enabled"
+          role="switch"
+          aria-checked={settings.apiServerEnabled}
+          onClick={() => onSettingChange('apiServerEnabled', !settings.apiServerEnabled)}
+          className={`
+            relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent
+            transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
+            ${settings.apiServerEnabled ? "bg-primary" : "bg-input"}
+          `}
+        >
+          <span
+            className={`
+              pointer-events-none flex h-5 w-5 items-center justify-center rounded-full bg-background shadow-lg ring-0
+              transition-transform
+              ${settings.apiServerEnabled ? "translate-x-5" : "translate-x-0"}
+            `}
+          />
+        </button>
+      </div>
+
+      {settings.apiServerEnabled && (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="api-port">Port</Label>
+            <Input
+              id="api-port"
+              type="number"
+              min={1024}
+              max={65535}
+              value={settings.apiServerPort}
+              onChange={(e) => {
+                const port = parseInt(e.target.value, 10);
+                if (port >= 1024 && port <= 65535) {
+                  onSettingChange('apiServerPort', port);
+                }
+              }}
+              className="w-32"
+            />
+            <p className="text-xs text-muted-foreground">
+              API server will listen on localhost:{settings.apiServerPort}
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="api-token">Auth Token (optional)</Label>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={generateToken}
+                className="h-6 text-xs"
+              >
+                Generate
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Input
+                  id="api-token"
+                  type={showToken ? "text" : "password"}
+                  value={settings.apiServerToken || ''}
+                  onChange={(e) => onSettingChange('apiServerToken', e.target.value || null)}
+                  placeholder="Leave empty for no auth"
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowToken(!showToken)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              If set, CLI must include this token to authenticate
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>CLI Configuration</Label>
+            <div className="bg-muted rounded-md p-3 font-mono text-xs relative">
+              <pre className="text-muted-foreground">
+{`# ~/.config/ai-pulse/cli.toml
+port = ${settings.apiServerPort}
+token = "${settings.apiServerToken || ''}"`}
+              </pre>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={copyCliConfig}
+                className="absolute top-2 right-2 h-6 px-2"
+              >
+                {copied ? (
+                  <Check className="h-3 w-3 text-green-500" />
+                ) : (
+                  <Copy className="h-3 w-3" />
+                )}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Copy this to your CLI config file to connect
+            </p>
+          </div>
+
+          <div className="rounded-md bg-blue-500/10 border border-blue-500/20 p-3">
+            <p className="text-xs text-blue-600 dark:text-blue-400">
+              <strong>Note:</strong> The API server requires an app restart to take effect.
+              Changes to port or token will apply after restarting AI Pulse.
+            </p>
+          </div>
+        </>
+      )}
     </div>
   );
 }
